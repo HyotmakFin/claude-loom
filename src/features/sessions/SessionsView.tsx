@@ -1,7 +1,10 @@
-/** 会话管理：搜索、置顶、归档、删除、进入对话。 */
-import { useEffect, useState } from "react";
+/** 会话管理：搜索、置顶、归档、删除、进入对话、新建会话。 */
+import { homeDir } from "@tauri-apps/api/path";
+import { open as openDialog } from "@tauri-apps/plugin-dialog";
+import { useCallback, useEffect, useState } from "react";
 
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
+import { Button } from "@/components/ui/Button";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { Icon } from "@/components/ui/Icon";
 import { TextField } from "@/components/ui/TextField";
@@ -20,6 +23,8 @@ export function SessionsView() {
   const [tab, setTab] = useState<Tab>("all");
   const [search, setSearch] = useState(query);
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  /** 尚未产生 sessionId 的新会话（伪会话） */
+  const [newSession, setNewSession] = useState<SessionSummary | null>(null);
   const [pendingDelete, setPendingDelete] = useState<SessionSummary | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
 
@@ -40,6 +45,35 @@ export function SessionsView() {
 
   const visible = tab === "pinned" ? list.filter((s) => s.pinned) : tab === "archived" ? list.filter((s) => s.archived) : list;
   const selected = visible.find((s) => s.id === selectedId) ?? list.find((s) => s.id === selectedId) ?? null;
+  const active = newSession ?? selected;
+  const handleChanged = useCallback(() => {
+    void refresh();
+  }, [refresh]);
+
+  const startNew = async () => {
+    setActionError(null);
+    try {
+      const home = await homeDir().catch(() => undefined);
+      const dir = await openDialog({ directory: true, multiple: false, defaultPath: home });
+      if (typeof dir !== "string") return;
+      setNewSession({
+        id: `new-${globalThis.crypto?.randomUUID?.() ?? Date.now()}`,
+        title: "新会话",
+        projectPath: dir,
+        gitBranch: null,
+        createdAt: null,
+        updatedAt: Date.now(),
+        messageCount: 0,
+        lastPrompt: null,
+        live: null,
+        pinned: false,
+        archived: false,
+      });
+      setSelectedId(null);
+    } catch (e) {
+      setActionError(errorText(e));
+    }
+  };
 
   const act = async (fn: () => Promise<unknown>) => {
     setActionError(null);
@@ -54,6 +88,9 @@ export function SessionsView() {
     <div className="flex h-full">
       <div className="flex w-[304px] shrink-0 flex-col border-r border-line">
         <div className="shrink-0 space-y-2.5 px-3 pt-3 pb-2">
+          <Button variant="secondary" icon="plus" className="w-full justify-start" onClick={() => void startNew()}>
+            新会话
+          </Button>
           <TextField icon="search" placeholder="搜索标题或内容" value={search} onChange={(e) => setSearch(e.target.value)} />
           <div className="flex items-center gap-1">
             {(["all", "pinned", "archived"] as const).map((t) => (
@@ -94,8 +131,11 @@ export function SessionsView() {
               <SessionRow
                 key={s.id}
                 session={s}
-                active={s.id === selected?.id}
-                onSelect={() => setSelectedId(s.id)}
+                active={s.id === active?.id}
+                onSelect={() => {
+                  setNewSession(null);
+                  setSelectedId(s.id);
+                }}
                 onPin={() => act(() => setFlag(s.id, { pinned: !s.pinned }))}
                 onArchive={() => act(() => setFlag(s.id, { archived: !s.archived }))}
                 onDelete={() => setPendingDelete(s)}
@@ -106,11 +146,12 @@ export function SessionsView() {
       </div>
 
       <div className="min-w-0 flex-1">
-        {selected ? (
+        {active ? (
           <ChatView
-            key={selected.id}
-            session={selected}
-            onChanged={() => void refresh()}
+            key={active.id}
+            session={active}
+            isNew={!!newSession}
+            onChanged={handleChanged}
           />
         ) : (
           <div className="flex h-full">

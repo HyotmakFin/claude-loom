@@ -19,8 +19,12 @@ Loom 只是一层薄壳：不负责安装 CLI，也不处理网络或模型适�
 - **Skill**：扫描 `~/.claude/skills/*/SKILL.md`，启停（重命名为 `SKILL.md.disabled`）、
   编辑 frontmatter 与正文、新建 Skill。
 - **插件**：列出已安装插件；添加外部插件目录并通过 `--plugin-dir` 传给 CLI。
+- **斜杠命令**：输入 `/` 实时预览当前目录可用的命令 / Skill（来自 CLI 的 initialize），
+  ↑↓ 选择，Enter 或 Tab 填入。
+- **新会话**：会话列表顶部的「新会话」，选择目录后直接开始，无需已有历史。
 - **预览**：与对话并排、可折叠；Markdown、图片、代码高亮（Shiki），
   localhost 网页内嵌，其余一律可在系统浏览器打开。
+- **深色模式**：侧栏顶部一键切换，画布 `#1F1F1E`，代码高亮同步使用深色主题；选择会记住。
 - **权限**：CLI 的工具权限请求会变成确认卡片（允许 / 始终允许 / 拒绝 / 拒绝并中止），
   状态机为 idle → streaming → awaiting-permission → streaming → done。
 
@@ -39,7 +43,7 @@ API Key 以明文保存在 Loom 的配置文件中（Unix 下权限 0600），�
 从 [Releases](https://github.com/HyotMakFin/claude-loom/releases/latest) 下载 `.pkg.tar.zst`：
 
 ```bash
-sudo pacman -U claude-loom-0.2.0-1-x86_64.pkg.tar.zst
+sudo pacman -U claude-loom-0.3.0-1-x86_64.pkg.tar.zst
 ```
 
 自行构建见 [packaging/README.md](packaging/README.md)。其他平台用 `npm run tauri build` 生成安装包。

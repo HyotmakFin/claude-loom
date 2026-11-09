@@ -8,11 +8,14 @@ import { create } from "zustand";
 import { initialRunState, reduce, canSend, type RunState, type Signal } from "@/cli/machine";
 import {
   CLI_EVENT,
+  initializeRequest,
   permissionResponse,
   userMessage,
   type CliEvent,
   type CliMessage,
+  type ControlResponseIn,
   type PermissionDecision,
+  type SlashCommand,
 } from "@/cli/protocol";
 import { errorText, ipc, type StartOptions } from "@/lib/ipc";
 
@@ -31,6 +34,8 @@ export interface RunSlice {
   messages: CliMessage[];
   /** --include-partial-messages 的增量文本；收到完整 assistant 消息后清空 */
   partial: string;
+  /** initialize 控制消息返回的可用斜杠命令 */
+  commands: SlashCommand[];
 }
 
 interface RunsStore {
@@ -49,7 +54,13 @@ let seq = 0;
 const deciding = new Set<string>();
 
 function emptySlice(runId: string): RunSlice {
-  return { runId, state: initialRunState, log: [], messages: [], partial: "" };
+  return { runId, state: initialRunState, log: [], messages: [], partial: "", commands: [] };
+}
+
+function extractCommands(msg: CliMessage): SlashCommand[] | null {
+  if (msg.type !== "control_response") return null;
+  const cmds = (msg as ControlResponseIn).response?.response?.commands;
+  return Array.isArray(cmds) ? cmds : null;
 }
 
 function nextPartial(cur: string, msg: CliMessage): string {
@@ -75,6 +86,7 @@ export const useRuns = create<RunsStore>((set, get) => {
             log,
             messages: msg ? [...cur.messages, msg] : cur.messages,
             partial: msg ? nextPartial(cur.partial, msg) : cur.partial,
+            commands: msg ? (extractCommands(msg) ?? cur.commands) : cur.commands,
           },
         },
       };
@@ -113,6 +125,8 @@ export const useRuns = create<RunsStore>((set, get) => {
         if (get().runs[runId]?.state.process === "alive") break;
         await new Promise((r) => setTimeout(r, 50));
       }
+      // 拉取斜杠命令列表（本地控制消息，不产生模型请求）
+      void write(runId, initializeRequest()).catch(() => {});
       return runId;
     },
 

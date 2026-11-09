@@ -57,3 +57,31 @@
   /* 聚焦环 */
   --focus-ring-width: 2px;
 }
+
+/*
+ * 深色模式：画布 #1F1F1E。只覆盖变量，组件代码不需要任何 dark: 变体。
+ * 由 src/stores/theme.ts 写入 <html data-theme>，首帧前完成，避免闪白。
+ */
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --color-canvas: #1f1f1e;
+  --color-surface: #262625;
+  --color-sunken: #2d2d2b;
+  --color-hover: #323230;
+  --color-line: #383733;
+  --color-line-strong: #4a4842;
+  --color-ink: #edeae3;
+  --color-ink-muted: #b3aea4;
+  --color-ink-faint: #827d73;
+  --color-accent-hover: #e08a6c;
+  --color-accent-press: #c96c50;
+  --color-accent-tint: #3a2a22;
+  --color-selection: #5b3c2f;
+  --color-scrim: rgb(0 0 0 / 0.55);
+  --color-ok: #8bb683;
+  --color-warn: #d6a34c;
+  --color-danger: #e5836c;
+  --shadow-subtle: 0 1px 2px rgb(0 0 0 / 0.3);
+  --shadow-panel: 0 1px 3px rgb(0 0 0 / 0.35), 0 0 0 1px rgb(255 255 255 / 0.02);
+  --shadow-raised: 0 6px 20px rgb(0 0 0 / 0.4), 0 1px 3px rgb(0 0 0 / 0.3);
+}

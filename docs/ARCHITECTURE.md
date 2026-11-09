@@ -134,3 +134,15 @@ Loom 不支持的 control_request 子类型由 Rust 直接回复 `subtype:"error
   文本截断到 512KB。
 - 网页：CSP 只允许内嵌 localhost；其他地址显示降级提示，始终提供"在系统浏览器打开"（tauri-plugin-opener）。
 - Shiki 使用 JS 正则引擎：Tauri 的 CSP 不允许 WebAssembly 编译，避免额外放行 `wasm-unsafe-eval`。
+
+
+## 界面状态
+
+- **主题**：`src/stores/theme.ts` 写入 `<html data-theme>` 与 localStorage，首帧前应用；
+  深色变量在 `styles/tokens.css` 的 `:root[data-theme="dark"]`，画布 `#1F1F1E`。
+  Shiki 同时加载 `loom-light` / `loom-dark` 两套主题，Markdown 渲染按当前主题选择。
+- **斜杠命令**：CLI spawn 后发送 `{"type":"control_request","request":{"subtype":"initialize"}}`，
+  从 `control_response.response.commands` 取命令列表，存入 `RunSlice.commands`。
+  输入 `/` 时如该会话尚未连接，会静默启动 CLI（不产生模型请求）以获取列表。
+- **新会话**：SessionsView 先用伪 SessionSummary 打开 ChatView，首次发送时不带 `--resume`；
+  拿到 system init 的 sessionId 后刷新列表，正式会话随即出现。

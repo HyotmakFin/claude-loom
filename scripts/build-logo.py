@@ -28,6 +28,8 @@ APP = ROOT / "src" / "assets" / "brand"
 LORA = ROOT / ".fonts-cache" / "downloads" / "Lora.ttf"
 
 CANVAS, INK, ACCENT, LINE = "#FAF9F5", "#1F1E1B", "#D97757", "#E8E4DC"
+# 深色模式的无底标志：经线用浅墨色，缝隙用深色画布色，橙线不变
+INK_DARK, CANVAS_DARK = "#EDEAE3", "#1F1F1E"
 
 
 def weave(cx: float, cy: float, unit: float, warp: str, weft: str, gap_color: str,
@@ -118,6 +120,9 @@ def main():
     mark = svg(100, 100, weave(50, 50, mu, INK, ACCENT, CANVAS))
     (OUT / "loom-mark.svg").write_text(mark)
     (APP / "loom-mark.svg").write_text(mark)
+    mark_dark = svg(100, 100, weave(50, 50, mu, INK_DARK, ACCENT, CANVAS_DARK))
+    (OUT / "loom-mark-dark.svg").write_text(mark_dark)
+    (APP / "loom-mark-dark.svg").write_text(mark_dark)
 
     if LORA.exists():
         h, u = 120, 92

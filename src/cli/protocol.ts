@@ -85,9 +85,31 @@ export interface ControlCancelRequest {
   request_id: string;
 }
 
+export interface SlashCommand {
+  name: string;
+  description?: string;
+  argumentHint?: string;
+  aliases?: string[];
+  builtin?: boolean;
+}
+
 export interface ControlResponseIn {
   type: "control_response";
-  response: { subtype: "success" | "error"; request_id: string; [k: string]: unknown };
+  response: {
+    subtype: "success" | "error";
+    request_id: string;
+    response?: { commands?: SlashCommand[]; [k: string]: unknown };
+    [k: string]: unknown;
+  };
+}
+
+/** 向 CLI 请求可用命令（initialize 控制消息）。 */
+export function initializeRequest() {
+  return {
+    type: "control_request",
+    request_id: globalThis.crypto?.randomUUID?.() ?? `${Date.now()}-${Math.random()}`,
+    request: { subtype: "initialize" },
+  };
 }
 
 export type CliMessage =

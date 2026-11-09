@@ -15,6 +15,7 @@ import { errorText, ipc } from "@/lib/ipc";
 import { EXT_LANG, escapeHtml, highlightCode } from "@/lib/markdown";
 import { formatBytes } from "@/lib/format";
 import type { FilePreview } from "@/lib/types";
+import { useTheme } from "@/stores/theme";
 
 type Mode = "file" | "web";
 
@@ -118,17 +119,18 @@ function FileMode({ path, setPath, file, error, loading, onLoad, onPick }: {
 
 function FileBody({ file }: { file: FilePreview }) {
   const ext = file.name.split(".").pop()?.toLowerCase() ?? "";
+  const theme = useTheme((s) => s.theme);
   const [codeHtml, setCodeHtml] = useState("");
 
   useEffect(() => {
     if (file.kind !== "text" || file.content == null) return;
     let alive = true;
     setCodeHtml("");
-    highlightCode(file.content, EXT_LANG[ext] ?? "text").then((h) => alive && setCodeHtml(h));
+    highlightCode(file.content, EXT_LANG[ext] ?? "text", theme).then((h) => alive && setCodeHtml(h));
     return () => {
       alive = false;
     };
-  }, [file, ext]);
+  }, [file, ext, theme]);
 
   return (
     <div>

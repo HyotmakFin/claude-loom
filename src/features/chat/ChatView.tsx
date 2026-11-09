@@ -5,6 +5,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 
 import type { Phase } from "@/cli/machine";
+import type { SlashCommand } from "@/cli/protocol";
 import { canSend } from "@/cli/machine";
 import { PermissionPrompt } from "@/components/PermissionPrompt";
 import { Button } from "@/components/ui/Button";
@@ -35,7 +36,7 @@ const PHASE: Record<Phase, { tone: Tone; label: string }> = {
 
 const isMac = /Mac/.test(navigator.userAgent);
 
-export function ChatView({ session, onChanged }: { session: SessionSummary; onChanged: () => void }) {
+export function ChatView({ session, isNew = false, onChanged }: { session: SessionSummary; isNew?: boolean; onChanged: () => void }) {
   const cfg = useConfig((s) => s.config);
   const [detail, setDetail] = useState<SessionDetail | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
@@ -44,6 +45,11 @@ export function ChatView({ session, onChanged }: { session: SessionSummary; onCh
   const [error, setError] = useState<string | null>(null);
   const [previewOpen, setPreviewOpen] = useState(false);
   const [confirmLive, setConfirmLive] = useState<null | (() => void)>(null);
+  const [slashIndex, setSlashIndex] = useState(0);
+  const [slashDismissed, setSlashDismissed] = useState(false);
+  const composerRef = useRef<HTMLDivElement>(null);
+  const slashBoot = useRef(false);
+  const newSidNotified = useRef(false);
   /** 已发送但 CLI 尚未回显的用户消息（--resume 下 CLI 可能不回显） */
   const [pending, setPending] = useState<{ runId: string; text: string; index: number } | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -56,12 +62,20 @@ export function ChatView({ session, onChanged }: { session: SessionSummary; onCh
 
   useEffect(() => {
     let alive = true;
-    setDetail(null);
     setLoadError(null);
     setError(null);
     setDraft("");
     setPending(null);
+    setSlashDismissed(false);
+    newSidNotified.current = false;
     setRunId(sessionRuns.get(session.id) ?? null);
+    if (isNew) {
+      setDetail({ session, messages: [] });
+      return () => {
+        alive = false;
+      };
+    }
+    setDetail(null);
     ipc.sessionMessages(session.id).then(
       (d) => alive && setDetail(d),
       (e) => alive && setLoadError(errorText(e)),
@@ -69,11 +83,52 @@ export function ChatView({ session, onChanged }: { session: SessionSummary; onCh
     return () => {
       alive = false;
     };
-  }, [session.id]);
+    // session 对象随列表刷新变化，只在 id / 是否新会话变化时重新加载
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [session.id, isNew]);
 
   const historyItems = useMemo(() => (detail ? itemsFromHistory(detail.messages) : []), [detail]);
   const liveItems = useMemo(() => (run ? itemsFromCli(run.messages) : []), [run]);
   const partial = run?.partial ?? "";
+
+  const cwd = detail?.session.projectPath ?? session.projectPath ?? null;
+  const commands = run?.commands ?? [];
+  const slashQuery = !slashDismissed && /^\/[^\s]*$/.test(draft) ? draft.slice(1).toLowerCase() : null;
+  const filteredCommands = useMemo(() => {
+    if (slashQuery === null) return [];
+    return commands
+      .filter((c) => {
+        const n = c.name.replace(/^\//, "").toLowerCase();
+        return n.startsWith(slashQuery) || n.includes(slashQuery) || (c.aliases ?? []).some((a) => a.toLowerCase().startsWith(slashQuery));
+      })
+      .slice(0, 12);
+  }, [commands, slashQuery]);
+
+  useEffect(() => {
+    setSlashIndex(0);
+  }, [slashQuery]);
+
+  useEffect(() => {
+    if (!/^\/[^\s]*$/.test(draft)) setSlashDismissed(false);
+  }, [draft]);
+
+  // 输入 "/" 时静默启动 CLI（不产生模型请求），以获取该目录可用的命令
+  useEffect(() => {
+    // 正在别的终端运行的会话不自动抢连接，等用户发送时再确认
+    if (slashQuery === null || !cwd || runId || slashBoot.current || session.live) return;
+    slashBoot.current = true;
+    ensureRun().catch(() => {
+      slashBoot.current = false;
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [slashQuery, cwd, runId, session.live]);
+
+  const pickCommand = (c: SlashCommand) => {
+    setDraft(`/${c.name.replace(/^\//, "")} `);
+    setSlashDismissed(true);
+    setSlashIndex(0);
+    requestAnimationFrame(() => composerRef.current?.querySelector("textarea")?.focus());
+  };
 
   // 本次发送之前的实时消息与之后的消息分开，好把乐观回显插在正确位置
   const mark = pending && pending.runId === runId ? pending.index : null;
@@ -88,9 +143,17 @@ export function ChatView({ session, onChanged }: { session: SessionSummary; onCh
   }, [echoed]);
 
   const lastDone = run?.state.lastResult;
+  const runSessionId = run?.state.sessionId ?? null;
   useEffect(() => {
     if (run?.state.phase === "done") onChanged();
   }, [run?.state.phase, lastDone, onChanged]);
+  useEffect(() => {
+    // 新会话第一次拿到 sessionId 后刷新列表，让它出现在左侧
+    if (isNew && runSessionId && !newSidNotified.current) {
+      newSidNotified.current = true;
+      onChanged();
+    }
+  }, [isNew, runSessionId, onChanged]);
 
   useEffect(() => {
     const el = scrollRef.current;
@@ -102,7 +165,7 @@ export function ChatView({ session, onChanged }: { session: SessionSummary; onCh
     if (existing && existing.state.process === "alive") return runId!;
     const cwd = detail?.session.projectPath ?? session.projectPath ?? null;
     if (!cwd) throw new Error("该会话没有记录工作目录，无法续聊");
-    const id = await useRuns.getState().start(startOptions(cfg, cwd, session.id));
+    const id = await useRuns.getState().start(startOptions(cfg, cwd, isNew ? undefined : session.id));
     sessionRuns.set(session.id, id);
     setRunId(id);
     return id;
@@ -135,14 +198,13 @@ export function ChatView({ session, onChanged }: { session: SessionSummary; onCh
 
   const head = run?.state.pending[0];
   const runSlice: RunSlice | undefined = run;
-  const cwd = detail?.session.projectPath ?? session.projectPath;
 
   return (
     <div className="flex h-full min-w-0">
       <div className="flex min-w-0 flex-1 flex-col">
         <header className="flex h-14 shrink-0 items-center gap-3 border-b border-line px-6">
           <div className="min-w-0">
-            <h2 className="truncate font-serif text-[15px] font-semibold text-ink">{session.title}</h2>
+            <h2 className="truncate font-serif text-[15px] font-semibold text-ink">{isNew ? "新会话" : session.title}</h2>
             <div className="flex items-center gap-2 font-sans text-[11px] text-ink-faint">
               <span className="truncate font-mono">{cwd ?? "未知目录"}</span>
               {session.gitBranch && <span>· {session.gitBranch}</span>}
@@ -191,7 +253,11 @@ export function ChatView({ session, onChanged }: { session: SessionSummary; onCh
             )}
             {!detail && !loadError && <p className="py-20 text-center font-sans text-[12px] text-ink-faint">正在读取会话…</p>}
             {detail && historyItems.length === 0 && liveItems.length === 0 && (
-              <EmptyState icon="chat" title="这个会话还没有可显示的消息" hint="在下方输入内容即可继续。" />
+              <EmptyState
+                icon="chat"
+                title={isNew ? "新会话" : "这个会话还没有可显示的消息"}
+                hint={isNew ? "输入第一条消息开始；输入 / 可以浏览可用的斜杠命令。" : "在下方输入内容即可继续。"}
+              />
             )}
             {historyItems.map((item) => (
               <ChatMessageView key={item.key} item={item} />
@@ -243,17 +309,102 @@ export function ChatView({ session, onChanged }: { session: SessionSummary; onCh
               }}
             />
           )}
-          <div className="rounded-card border border-line bg-surface shadow-raised transition-[border-color,box-shadow] duration-150 focus-within:border-accent focus-within:ring-3 focus-within:ring-accent-tint">
-            <TextArea
+          <div ref={composerRef} className="relative">
+            {slashQuery !== null && (
+              <div className="absolute right-0 bottom-full left-0 z-20 mb-2 overflow-hidden rounded-card border border-line bg-surface shadow-raised">
+                <div className="flex items-center justify-between border-b border-line px-3 py-1.5 font-sans text-[11px] text-ink-faint">
+                  <span>斜杠命令</span>
+                  <span>{commands.length > 0 ? `${filteredCommands.length} / ${commands.length}` : ""}</span>
+                </div>
+                <div className="max-h-72 overflow-y-auto py-1">
+                  {commands.length === 0 ? (
+                    <p className="px-3 py-3 font-sans text-[12px] text-ink-faint">
+                      {session.live && !runId
+                        ? "该会话正在其他终端运行，续聊后可读取命令"
+                        : runId
+                          ? "正在读取命令…"
+                          : "正在启动 CLI 以读取命令…"}
+                    </p>
+                  ) : filteredCommands.length === 0 ? (
+                    <p className="px-3 py-3 font-sans text-[12px] text-ink-faint">没有匹配的命令</p>
+                  ) : (
+                    filteredCommands.map((c, i) => (
+                      <button
+                        key={c.name}
+                        type="button"
+                        onMouseDown={(e) => {
+                          e.preventDefault();
+                          pickCommand(c);
+                        }}
+                        onMouseEnter={() => setSlashIndex(i)}
+                        className={
+                          "flex w-full items-start gap-3 px-3 py-1.5 text-left transition-colors " +
+                          (i === slashIndex ? "bg-sunken" : "hover:bg-sunken")
+                        }
+                      >
+                        <code className="mt-px shrink-0 font-mono text-[12px] font-bold text-ink">
+                          /{c.name.replace(/^\//, "")}
+                        </code>
+                        <span className="min-w-0 flex-1">
+                          {c.argumentHint && (
+                            <span className="font-mono text-[11px] text-ink-faint">{c.argumentHint} </span>
+                          )}
+                          <span className="block truncate font-sans text-[11.5px] text-ink-muted">
+                            {c.description ?? ""}
+                          </span>
+                        </span>
+                        {c.builtin && (
+                          <span className="mt-px shrink-0 rounded-chip border border-line px-1.5 font-sans text-[10px] leading-4 text-ink-faint">
+                            内置
+                          </span>
+                        )}
+                      </button>
+                    ))
+                  )}
+                </div>
+              </div>
+            )}
+            <div className="rounded-card border border-line bg-surface shadow-raised transition-[border-color,box-shadow] duration-150 focus-within:border-accent focus-within:ring-3 focus-within:ring-accent-tint">
+              <TextArea
               rows={2}
               className="block w-full px-4 pt-3 text-[14px]"
               value={draft}
               placeholder={
-                !cwd ? "该会话缺少工作目录" : alive ? (busy ? "正在生成…" : "继续这个会话…") : "输入消息开始续聊（首次发送会启动 claude --resume）"
+                !cwd
+                  ? "该会话缺少工作目录"
+                  : isNew
+                    ? "输入第一条消息开始新会话；输入 / 浏览斜杠命令"
+                    : alive
+                      ? busy
+                        ? "正在生成…"
+                        : "继续这个会话…"
+                      : "输入消息开始续聊（首次发送会启动 claude --resume）"
               }
               disabled={!cwd}
               onChange={(e) => setDraft(e.target.value)}
               onKeyDown={(e) => {
+                if (slashQuery !== null && filteredCommands.length > 0) {
+                  if (e.key === "ArrowDown") {
+                    e.preventDefault();
+                    setSlashIndex((i) => (i + 1) % filteredCommands.length);
+                    return;
+                  }
+                  if (e.key === "ArrowUp") {
+                    e.preventDefault();
+                    setSlashIndex((i) => (i - 1 + filteredCommands.length) % filteredCommands.length);
+                    return;
+                  }
+                  if (e.key === "Tab" || (e.key === "Enter" && !e.metaKey && !e.ctrlKey)) {
+                    e.preventDefault();
+                    pickCommand(filteredCommands[slashIndex]!);
+                    return;
+                  }
+                  if (e.key === "Escape") {
+                    e.preventDefault();
+                    setSlashDismissed(true);
+                    return;
+                  }
+                }
                 if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) {
                   e.preventDefault();
                   void submit();
@@ -266,7 +417,7 @@ export function ChatView({ session, onChanged }: { session: SessionSummary; onCh
                 <Kbd>↵</Kbd>
                 <span className="ml-1">发送</span>
                 <span className="mx-1 text-line-strong">·</span>
-                会话 {session.id.slice(0, 8)}
+                会话 {(run?.state.sessionId ?? (isNew ? null : session.id))?.slice(0, 8) ?? "新会话"}
               </span>
               {busy && runId ? (
                 <Button size="sm" icon="stop" onClick={() => void useRuns.getState().stop(runId)}>
@@ -281,6 +432,7 @@ export function ChatView({ session, onChanged }: { session: SessionSummary; onCh
                   onClick={() => void submit()}
                 />
               )}
+            </div>
             </div>
           </div>
         </footer>

@@ -6,7 +6,7 @@ import MarkdownIt from "markdown-it";
 import { createHighlighter, type Highlighter, type ThemeRegistration } from "shiki";
 import { createJavaScriptRegexEngine } from "shiki/engine/javascript";
 
-export const loomTheme: ThemeRegistration = {
+export const loomLightTheme: ThemeRegistration = {
   name: "loom-light",
   type: "light",
   colors: {
@@ -27,6 +27,27 @@ export const loomTheme: ThemeRegistration = {
   ],
 };
 
+export const loomDarkTheme: ThemeRegistration = {
+  name: "loom-dark",
+  type: "dark",
+  colors: {
+    "editor.background": "#2D2D2B",
+    "editor.foreground": "#EDEAE3",
+  },
+  settings: [
+    { settings: { foreground: "#EDEAE3" } },
+    { scope: ["comment", "punctuation.definition.comment"], settings: { foreground: "#8C877D", fontStyle: "italic" } },
+    { scope: ["keyword", "storage", "storage.type", "keyword.control"], settings: { foreground: "#E79A7F" } },
+    { scope: ["string", "string.quoted", "string.template"], settings: { foreground: "#A8C79B" } },
+    { scope: ["constant.numeric", "constant.language", "constant.character"], settings: { foreground: "#E0B36B" } },
+    { scope: ["entity.name.function", "support.function", "meta.function-call"], settings: { foreground: "#8FB8D9" } },
+    { scope: ["entity.name.type", "support.class", "entity.name.class"], settings: { foreground: "#C3A6D9" } },
+    { scope: ["entity.name.tag", "variable.other.property"], settings: { foreground: "#E79A7F" } },
+    { scope: ["punctuation", "meta.brace", "keyword.operator"], settings: { foreground: "#A8A298" } },
+    { scope: ["markup.heading", "markup.bold"], settings: { foreground: "#EDEAE3", fontStyle: "bold" } },
+  ],
+};
+
 const LANGS = [
   "javascript", "typescript", "tsx", "jsx", "json", "rust", "python", "bash", "shell", "markdown",
   "html", "css", "yaml", "toml", "diff", "sql", "go", "java", "c", "cpp",
@@ -37,7 +58,7 @@ function highlighter(): Promise<Highlighter> {
   // 用 JS 正则引擎而非 Oniguruma WASM：Tauri 的 CSP 默认不允许 WebAssembly 编译，
   // 且不必额外放行 wasm-unsafe-eval。常见语言的高亮结果与 WASM 引擎基本一致。
   highlighterPromise ??= createHighlighter({
-    themes: [loomTheme],
+    themes: [loomLightTheme, loomDarkTheme],
     langs: LANGS,
     engine: createJavaScriptRegexEngine({ forgiving: true }),
   });
@@ -66,7 +87,10 @@ export function escapeHtml(s: string): string {
 
 let latestRender = 0;
 
-export async function renderMarkdown(source: string): Promise<string> {
+export type ThemeName = "light" | "dark";
+const themeName = (t: ThemeName) => (t === "dark" ? "loom-dark" : "loom-light");
+
+export async function renderMarkdown(source: string, theme: ThemeName = "light"): Promise<string> {
   blocks.length = 0;
   const html = md.render(source);
   if (!blocks.length) return html;
@@ -81,7 +105,7 @@ export async function renderMarkdown(source: string): Promise<string> {
     }
     try {
       const use = (hl.getLoadedLanguages() as string[]).includes(lang) ? lang : "text";
-      return hl.codeToHtml(code, { lang: use, theme: "loom-light" });
+      return hl.codeToHtml(code, { lang: use, theme: themeName(theme) });
     } catch {
       return `<pre class="loom-code-plain"><code>${escapeHtml(code)}</code></pre>`;
     }
@@ -91,11 +115,11 @@ export async function renderMarkdown(source: string): Promise<string> {
 }
 
 /** 给纯代码文本高亮（预览面板用） */
-export async function highlightCode(code: string, lang: string): Promise<string> {
+export async function highlightCode(code: string, lang: string, theme: ThemeName = "light"): Promise<string> {
   const hl = await highlighter();
   try {
     const use = (hl.getLoadedLanguages() as string[]).includes(lang) ? lang : "text";
-    return hl.codeToHtml(code, { lang: use, theme: "loom-light" });
+    return hl.codeToHtml(code, { lang: use, theme: themeName(theme) });
   } catch {
     return `<pre class="loom-code-plain"><code>${escapeHtml(code)}</code></pre>`;
   }
