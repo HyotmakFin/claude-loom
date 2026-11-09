@@ -1,3 +1,5 @@
+import { memo } from "react";
+
 import { Icon } from "@/components/ui/Icon";
 import { Markdown } from "@/components/ui/Markdown";
 import type { ChatItem } from "@/lib/chatItems";
@@ -5,10 +7,10 @@ import { formatClock } from "@/lib/format";
 
 import { ToolCard } from "./ToolCard";
 
-export function ChatMessageView({ item }: { item: ChatItem }) {
+export const ChatMessageView = memo(function ChatMessageView({ item }: { item: ChatItem }) {
   if (item.role === "system") {
     return (
-      <div className="my-3 flex justify-center">
+      <div className="chat-item my-3 flex justify-center">
         <p className="max-w-lg rounded-control border border-line bg-canvas px-3 py-1.5 text-center font-sans text-[12px] leading-relaxed text-ink-muted">
           {item.text}
         </p>
@@ -18,7 +20,7 @@ export function ChatMessageView({ item }: { item: ChatItem }) {
 
   if (item.role === "user") {
     return (
-      <div className="mb-6">
+      <div className="chat-item mb-6">
         <div className="flex items-center gap-2 font-sans text-[11px] text-ink-faint">
           <span className="inline-block size-1.5 rounded-pill bg-accent" />
           <span>你</span>
@@ -30,7 +32,7 @@ export function ChatMessageView({ item }: { item: ChatItem }) {
   }
 
   return (
-    <div className="mb-7">
+    <div className="chat-item mb-7">
       <div className="flex items-center gap-2 font-sans text-[11px] text-ink-faint">
         <Icon name="spark" size={11} className="text-ink-faint" />
         <span>Claude</span>
@@ -56,4 +58,4 @@ export function ChatMessageView({ item }: { item: ChatItem }) {
       </div>
     </div>
   );
-}
+});

@@ -1,3 +1,5 @@
+import { memo } from "react";
+
 import { Icon } from "@/components/ui/Icon";
 import type { ToolView } from "@/lib/chatItems";
 import { toolSummary } from "@/lib/chatItems";
@@ -13,7 +15,7 @@ const ICON: Record<string, "terminal" | "file" | "globe" | "search" | "spark"> =
   Grep: "search",
 };
 
-export function ToolCard({ tool }: { tool: ToolView }) {
+export const ToolCard = memo(function ToolCard({ tool }: { tool: ToolView }) {
   const pending = tool.result === undefined;
   const summary = toolSummary(tool);
 
@@ -62,4 +64,4 @@ export function ToolCard({ tool }: { tool: ToolView }) {
       </div>
     </details>
   );
-}
+});

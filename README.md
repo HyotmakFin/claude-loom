@@ -110,6 +110,14 @@ npm run tauri build -- --target universal-apple-darwin   # macOS 通用二进制
 
 Tauri 不支持交叉打包，每个平台都需要在本平台（或对应的 CI runner）上构建。
 
+## Linux 帧率说明
+
+WebKitGTK 在 Wayland 下拿不到 displayID 时会回退到内部 60Hz 的 vblank 定时器
+（`DisplayVBlankMonitorTimer`，`FullSpeedFramesPerSecond = 60`），因此 WebView 的
+`requestAnimationFrame` 最高 60fps，与显示器刷新率（如 200Hz）无关。这是 WebKitGTK
+的限制，Tauri / Loom 没有可调开关；窗口分辨率与尺寸不受影响。界面已针对长会话做
+离屏懒渲染与组件 memo，避免 60fps 之外的额外卡顿。
+
 ## 跨平台验证清单
 
 - [ ] **字体**：分别在 WKWebView（macOS）、WebView2（Windows）、WebKitGTK（Linux）中打开 CLI 调试页，

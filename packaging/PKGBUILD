@@ -1,6 +1,6 @@
 # Maintainer: Misuzu <HyotMakFin@users.noreply.github.com>
 pkgname=claude-loom
-pkgver=0.3.1
+pkgver=0.3.2
 pkgrel=1
 pkgdesc='Loom — Claude Code CLI 的图形外壳（Tauri + React）'
 arch=('x86_64' 'aarch64')
