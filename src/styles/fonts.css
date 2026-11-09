@@ -1,0 +1,49 @@
+/*
+ * 打包字体。woff2 由 `npm run fonts` 生成到 src/assets/fonts/（见 scripts/build-fonts.py）。
+ * font-display: block —— 与系统字体闪烁相比，短暂空白更可接受；字体全部本地打包，阻塞期极短。
+ */
+@font-face {
+  font-family: "Lora";
+  src: url("../assets/fonts/Lora-Variable.woff2") format("woff2");
+  font-weight: 400 700;
+  font-style: normal;
+  font-display: block;
+}
+@font-face {
+  font-family: "Lora";
+  src: url("../assets/fonts/Lora-Italic-Variable.woff2") format("woff2");
+  font-weight: 400 700;
+  font-style: italic;
+  font-display: block;
+}
+
+/* 思源宋体静态子集：GB2312 一级字（3755）+ 中文标点 + 拉丁 */
+@font-face {
+  font-family: "Loom Serif SC";
+  src: url("../assets/fonts/SourceHanSerifSC-Regular.subset.woff2") format("woff2");
+  font-weight: 400;
+  font-style: normal;
+  font-display: block;
+}
+@font-face {
+  font-family: "Loom Serif SC";
+  src: url("../assets/fonts/SourceHanSerifSC-SemiBold.subset.woff2") format("woff2");
+  font-weight: 600 700;
+  font-style: normal;
+  font-display: block;
+}
+
+@font-face {
+  font-family: "JetBrains Mono";
+  src: url("../assets/fonts/JetBrainsMono-Regular.woff2") format("woff2");
+  font-weight: 400;
+  font-style: normal;
+  font-display: block;
+}
+@font-face {
+  font-family: "JetBrains Mono";
+  src: url("../assets/fonts/JetBrainsMono-Bold.woff2") format("woff2");
+  font-weight: 700;
+  font-style: normal;
+  font-display: block;
+}

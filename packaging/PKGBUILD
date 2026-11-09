@@ -1,0 +1,46 @@
+# Maintainer: Your Name <you@example.com>
+#
+# 本地构建：在仓库根目录执行 scripts/make-aur-source.sh，然后
+#   cd packaging && makepkg -f
+# 发布到 AUR：把 source 换成 GitHub 发布包的 URL，执行 updpkgsums 后
+#   makepkg --printsrcinfo > .SRCINFO
+pkgname=loom
+pkgver=0.1.0
+pkgrel=1
+pkgdesc='Claude Code CLI 的图形外壳（Tauri + React）'
+arch=('x86_64' 'aarch64')
+url='https://github.com/HyotmakFin/loom'
+license=('MIT')
+depends=('webkit2gtk-4.1' 'gtk3' 'librsvg')
+makedepends=('rust' 'cargo' 'nodejs' 'npm' 'pkgconf')
+optdepends=('claude-code: Claude Code CLI（也可通过 npm 全局安装）')
+source=("$pkgname-$pkgver.tar.gz")
+sha256sums=('260b906f6fbea6ef3531cdbe391847aa7cf25428d5c57cdd686c84f599b35b44')
+
+prepare() {
+  cd "$srcdir/$pkgname-$pkgver"
+  npm ci --no-audit --no-fund
+  # 先把依赖抓齐，build() 中才能完全离线编译
+  ( cd src-tauri && cargo fetch --locked )
+}
+
+build() {
+  cd "$srcdir/$pkgname-$pkgver"
+  npm run build
+  ( cd src-tauri && cargo build --release --locked --offline --features custom-protocol )
+}
+
+package() {
+  cd "$srcdir/$pkgname-$pkgver"
+  install -Dm755 src-tauri/target/release/loom "$pkgdir/usr/bin/loom"
+  install -Dm644 LICENSE "$pkgdir/usr/share/licenses/$pkgname/LICENSE"
+  install -Dm644 README.md "$pkgdir/usr/share/doc/$pkgname/README.md"
+  # 桌面文件名、Icon、StartupWMClass 都必须是 `loom`：Linux 下窗口 app_id
+  # 由 GtkApplication 的可执行文件名决定（实测为 "loom"），KDE/GNOME 的 Wayland
+  # 靠它把窗口关联到 .desktop 与图标
+  install -Dm644 packaging/loom.desktop "$pkgdir/usr/share/applications/loom.desktop"
+  for size in 32 128 256; do
+    install -Dm644 "assets/brand/loom-icon-${size}.png" \
+      "$pkgdir/usr/share/icons/hicolor/${size}x${size}/apps/loom.png"
+  done
+}

@@ -1,0 +1,59 @@
+/*
+ * Loom 设计 token —— 组件中只允许使用这里生成的工具类（bg-canvas、border-line、
+ * rounded-card …）或对应 CSS 变量，禁止硬编码颜色/字体/圆角。
+ * 先把 Tailwind 默认的颜色、圆角、阴影清空，杜绝 `bg-blue-500`、`rounded-2xl` 之类的偏离。
+ */
+@theme {
+  --color-*: initial;
+  --radius-*: initial;
+  --shadow-*: initial;
+
+  /* 画布与表面 */
+  --color-canvas: #faf9f5;          /* 窗口底色 / 侧栏 */
+  --color-surface: #ffffff;         /* 主工作区、卡片、输入框 */
+  --color-sunken: #f4f2ec;          /* 代码块、hover、禁用态 */
+  --color-hover: #efece4;           /* 侧栏条目 hover */
+  --color-line: #e8e4dc;            /* 唯一的层次手段：1px 边框 */
+  --color-line-strong: #d9d3c7;
+  --color-accent-tint: #fbefe9;     /* 极浅橙底，仅用于小面积选中/徽标 */
+
+  /* 文字 */
+  --color-ink: #1f1e1b;
+  --color-ink-muted: #5f5b53;
+  --color-ink-faint: #9a958b;
+  --color-on-accent: #ffffff;
+
+  /* 强调色：仅用于主按钮、当前选中、链接、聚焦环、关键状态点 */
+  --color-accent: #d97757;
+  --color-accent-hover: #c86a4b;
+  --color-accent-press: #b65e42;
+  --color-selection: #f3d9cc;       /* 文本选区 */
+  --color-scrim: rgb(31 30 27 / 0.28); /* 模态遮罩 */
+
+  /* 语义状态（只用于小面积：状态点、细边框、文字） */
+  --color-ok: #5e8a5a;
+  --color-warn: #c08a2e;
+  --color-danger: #b5452f;
+
+  /* 字体：衬线只给 AI 正文与标题；UI 控件走系统无衬线 */
+  --font-serif: "Lora", "Loom Serif SC", "Source Han Serif SC", "Noto Serif CJK SC", "Songti SC", "SimSun", serif;
+  /* 通用兜底；实际按平台在 index.css 中覆盖（见 :root[data-platform]） */
+  --font-sans: -apple-system, "Segoe UI", "PingFang SC", "Microsoft YaHei UI", sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, "SF Mono", "Cascadia Mono", "Consolas", monospace;
+
+  /* 圆角：柔和但不做气泡 */
+  --radius-chip: 6px;               /* 徽标、kbd、小标签 */
+  --radius-control: 8px;            /* 按钮、导航条目 */
+  --radius-field: 10px;             /* 输入框 */
+  --radius-card: 12px;              /* 卡片、弹层、输入器 */
+  --radius-panel: 14px;             /* 主工作区面板 */
+  --radius-pill: 9999px;            /* 状态点、状态胶囊 */
+
+  /* 阴影：极轻，不发光 */
+  --shadow-subtle: 0 1px 2px rgb(31 30 27 / 0.04);
+  --shadow-panel: 0 1px 3px rgb(31 30 27 / 0.04), 0 0 0 1px rgb(31 30 27 / 0.02);
+  --shadow-raised: 0 4px 16px rgb(31 30 27 / 0.06), 0 1px 3px rgb(31 30 27 / 0.05);
+
+  /* 聚焦环 */
+  --focus-ring-width: 2px;
+}

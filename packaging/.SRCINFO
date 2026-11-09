@@ -1,0 +1,21 @@
+pkgbase = loom
+	pkgdesc = Claude Code CLI 的图形外壳（Tauri + React）
+	pkgver = 0.1.0
+	pkgrel = 1
+	url = https://github.com/HyotmakFin/loom
+	arch = x86_64
+	arch = aarch64
+	license = MIT
+	makedepends = rust
+	makedepends = cargo
+	makedepends = nodejs
+	makedepends = npm
+	makedepends = pkgconf
+	depends = webkit2gtk-4.1
+	depends = gtk3
+	depends = librsvg
+	optdepends = claude-code: Claude Code CLI（也可通过 npm 全局安装）
+	source = loom-0.1.0.tar.gz
+	sha256sums = 260b906f6fbea6ef3531cdbe391847aa7cf25428d5c57cdd686c84f599b35b44
+
+pkgname = loom

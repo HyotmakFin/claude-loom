@@ -1,0 +1,27 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" width="1024" height="1024">
+  <rect x="100" y="100" width="824" height="824" rx="185.4" fill="#1F1E1B"/>
+  <line x1="242.39" y1="329.90" x2="781.61" y2="329.90" stroke="#D97757" stroke-width="97.23" stroke-linecap="round"/>
+  <line x1="242.39" y1="512.00" x2="781.61" y2="512.00" stroke="#D97757" stroke-width="97.23" stroke-linecap="round"/>
+  <line x1="242.39" y1="694.10" x2="781.61" y2="694.10" stroke="#D97757" stroke-width="97.23" stroke-linecap="round"/>
+  <line x1="329.90" y1="242.39" x2="329.90" y2="781.61" stroke="#FAF9F5" stroke-width="97.23" stroke-linecap="round"/>
+  <line x1="512.00" y1="242.39" x2="512.00" y2="781.61" stroke="#FAF9F5" stroke-width="97.23" stroke-linecap="round"/>
+  <line x1="694.10" y1="242.39" x2="694.10" y2="781.61" stroke="#FAF9F5" stroke-width="97.23" stroke-linecap="round"/>
+  <line x1="329.90" y1="258.21" x2="329.90" y2="401.58" stroke="#1F1E1B" stroke-width="143.38" stroke-linecap="butt"/>
+  <line x1="329.90" y1="257.71" x2="329.90" y2="402.08" stroke="#FAF9F5" stroke-width="97.23" stroke-linecap="butt"/>
+  <line x1="258.21" y1="512.00" x2="401.58" y2="512.00" stroke="#1F1E1B" stroke-width="143.38" stroke-linecap="butt"/>
+  <line x1="257.71" y1="512.00" x2="402.08" y2="512.00" stroke="#D97757" stroke-width="97.23" stroke-linecap="butt"/>
+  <line x1="329.90" y1="622.42" x2="329.90" y2="765.79" stroke="#1F1E1B" stroke-width="143.38" stroke-linecap="butt"/>
+  <line x1="329.90" y1="621.92" x2="329.90" y2="766.29" stroke="#FAF9F5" stroke-width="97.23" stroke-linecap="butt"/>
+  <line x1="440.31" y1="329.90" x2="583.69" y2="329.90" stroke="#1F1E1B" stroke-width="143.38" stroke-linecap="butt"/>
+  <line x1="439.81" y1="329.90" x2="584.19" y2="329.90" stroke="#D97757" stroke-width="97.23" stroke-linecap="butt"/>
+  <line x1="512.00" y1="440.31" x2="512.00" y2="583.69" stroke="#1F1E1B" stroke-width="143.38" stroke-linecap="butt"/>
+  <line x1="512.00" y1="439.81" x2="512.00" y2="584.19" stroke="#FAF9F5" stroke-width="97.23" stroke-linecap="butt"/>
+  <line x1="440.31" y1="694.10" x2="583.69" y2="694.10" stroke="#1F1E1B" stroke-width="143.38" stroke-linecap="butt"/>
+  <line x1="439.81" y1="694.10" x2="584.19" y2="694.10" stroke="#D97757" stroke-width="97.23" stroke-linecap="butt"/>
+  <line x1="694.10" y1="258.21" x2="694.10" y2="401.58" stroke="#1F1E1B" stroke-width="143.38" stroke-linecap="butt"/>
+  <line x1="694.10" y1="257.71" x2="694.10" y2="402.08" stroke="#FAF9F5" stroke-width="97.23" stroke-linecap="butt"/>
+  <line x1="622.42" y1="512.00" x2="765.79" y2="512.00" stroke="#1F1E1B" stroke-width="143.38" stroke-linecap="butt"/>
+  <line x1="621.92" y1="512.00" x2="766.29" y2="512.00" stroke="#D97757" stroke-width="97.23" stroke-linecap="butt"/>
+  <line x1="694.10" y1="622.42" x2="694.10" y2="765.79" stroke="#1F1E1B" stroke-width="143.38" stroke-linecap="butt"/>
+  <line x1="694.10" y1="621.92" x2="694.10" y2="766.29" stroke="#FAF9F5" stroke-width="97.23" stroke-linecap="butt"/>
+</svg>

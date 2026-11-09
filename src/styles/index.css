@@ -1,0 +1,135 @@
+@import "tailwindcss";
+@import "./tokens.css";
+@import "./fonts.css";
+
+/*
+ * 按平台选择无衬线栈（data-platform 由 src/main.tsx 在首帧前设置）。
+ * Linux：WebKitGTK 不解析通用族 `sans-serif`/`system-ui`（实测落到衬线），只能写具体字体名。
+ * 启动时 src/lib/platform.ts 会把 fc-match 查到的用户字体插到这个静态栈的最前面。
+ */
+:root[data-platform="macos"] {
+  --font-sans: -apple-system, BlinkMacSystemFont, "PingFang SC", sans-serif;
+}
+:root[data-platform="windows"] {
+  --font-sans: "Segoe UI Variable Text", "Segoe UI", "Microsoft YaHei UI", "Microsoft YaHei", sans-serif;
+}
+:root[data-platform="linux"] {
+  --font-sans: "Noto Sans", "Source Han Sans SC", "Source Han Sans CN", "Noto Sans CJK SC", "WenQuanYi Micro Hei",
+    "Cantarell", "Ubuntu", "DejaVu Sans", sans-serif;
+}
+
+@layer base {
+  html,
+  body,
+  #root {
+    height: 100%;
+  }
+
+  body {
+    margin: 0;
+    background: var(--color-canvas);
+    color: var(--color-ink);
+    font-family: var(--font-sans);
+    font-size: 14px;
+    line-height: 1.5;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
+    /* 三个 WebView 的合成粗体/斜体效果差异很大，统一禁用，只用真实字重 */
+    font-synthesis: none;
+  }
+
+  code,
+  kbd,
+  pre,
+  samp {
+    font-family: var(--font-mono);
+    /* 显式声明，避免 WKWebView / WebView2 / WebKitGTK 默认值不同 */
+    font-variant-ligatures: normal;
+    font-feature-settings: "calt" 1, "liga" 1;
+  }
+
+  :focus-visible {
+    outline: var(--focus-ring-width) solid var(--color-accent);
+    outline-offset: 1px;
+  }
+
+  ::selection {
+    background: var(--color-selection);
+  }
+}
+
+/* 仅 AI 正文与标题使用 */
+@utility prose-serif {
+  font-family: var(--font-serif);
+  font-size: 15px;
+  line-height: 1.75;
+  color: var(--color-ink);
+}
+
+/* Markdown 正文排版（AI 输出，衬线） */
+.md {
+  font-family: var(--font-serif);
+  font-size: 15px;
+  line-height: 1.75;
+  color: var(--color-ink);
+  overflow-wrap: anywhere;
+}
+.md > :first-child { margin-top: 0; }
+.md > :last-child { margin-bottom: 0; }
+.md p, .md ul, .md ol, .md blockquote, .md table, .md pre { margin: 0.7em 0; }
+.md h1, .md h2, .md h3, .md h4 {
+  font-family: var(--font-serif);
+  font-weight: 600;
+  line-height: 1.35;
+  margin: 1.1em 0 0.45em;
+}
+.md h1 { font-size: 1.32em; }
+.md h2 { font-size: 1.18em; }
+.md h3 { font-size: 1.06em; }
+.md ul, .md ol { padding-left: 1.45em; }
+.md ul { list-style: disc; }
+.md ol { list-style: decimal; }
+.md li { margin: 0.18em 0; }
+.md li > ul, .md li > ol { margin: 0.15em 0; }
+.md a { color: var(--color-accent); text-decoration: underline; text-underline-offset: 2px; }
+.md strong { font-weight: 600; }
+.md blockquote {
+  border-left: 2px solid var(--color-line-strong);
+  padding-left: 0.9em;
+  color: var(--color-ink-muted);
+}
+.md hr { border: 0; border-top: 1px solid var(--color-line); margin: 1.2em 0; }
+.md code {
+  font-family: var(--font-mono);
+  font-variant-ligatures: normal;
+  font-size: 0.86em;
+  background: var(--color-sunken);
+  border-radius: 4px;
+  padding: 0.1em 0.35em;
+}
+.md pre {
+  background: var(--color-sunken);
+  border: 1px solid var(--color-line);
+  border-radius: var(--radius-card);
+  padding: 12px 14px;
+  overflow-x: auto;
+  font-size: 12.5px;
+  line-height: 1.62;
+}
+.md pre code {
+  background: none;
+  padding: 0;
+  font-size: inherit;
+}
+.md pre.shiki {
+  background: var(--color-sunken) !important;
+  border: 1px solid var(--color-line);
+  border-radius: var(--radius-card);
+  padding: 12px 14px;
+}
+.md table { border-collapse: collapse; width: 100%; font-size: 0.92em; }
+.md th, .md td { border: 1px solid var(--color-line); padding: 5px 9px; text-align: left; }
+.md th { background: var(--color-canvas); font-weight: 600; }
+.md img { max-width: 100%; border-radius: var(--radius-card); border: 1px solid var(--color-line); }
+.md input[type="checkbox"] { margin-right: 0.4em; }
