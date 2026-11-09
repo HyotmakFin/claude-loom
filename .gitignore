@@ -12,3 +12,4 @@ packaging/*.pkg.tar.*
 packaging/.SRCINFO
 packaging/*.tar.gz
 packaging/*.log
+src-tauri/resources/libloom-vblank.so

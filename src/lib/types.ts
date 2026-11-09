@@ -94,6 +94,8 @@ export interface ToolResult {
 
 export interface ChatMessage {
   role: "user" | "assistant" | "system";
+  /** 对应 JSONL 行的 uuid；用于分叉 / 删除 */
+  uuid: string | null;
   timestamp: string | null;
   text: string | null;
   thinking: string | null;

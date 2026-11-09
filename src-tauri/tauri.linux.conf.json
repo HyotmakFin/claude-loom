@@ -1,9 +1,22 @@
 {
   "bundle": {
-    "targets": ["deb", "appimage"],
+    "targets": [
+      "deb",
+      "appimage"
+    ],
     "linux": {
-      "deb": { "depends": ["libwebkit2gtk-4.1-0", "libgtk-3-0"] },
-      "appimage": { "bundleMediaFramework": false }
+      "deb": {
+        "depends": [
+          "libwebkit2gtk-4.1-0",
+          "libgtk-3-0"
+        ]
+      },
+      "appimage": {
+        "bundleMediaFramework": false
+      }
+    },
+    "resources": {
+      "resources/libloom-vblank.so": "libloom-vblank.so"
     }
   }
 }

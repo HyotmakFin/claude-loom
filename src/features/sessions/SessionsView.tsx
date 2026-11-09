@@ -50,6 +50,15 @@ export function SessionsView() {
     void refresh();
   }, [refresh]);
 
+  const handleFork = useCallback(
+    async (forked: SessionSummary) => {
+      setNewSession(null);
+      await refresh();
+      setSelectedId(forked.id);
+    },
+    [refresh],
+  );
+
   const startNew = async () => {
     setActionError(null);
     try {
@@ -152,6 +161,7 @@ export function SessionsView() {
             session={active}
             isNew={!!newSession}
             onChanged={handleChanged}
+            onFork={handleFork}
           />
         ) : (
           <div className="flex h-full">

@@ -2,7 +2,7 @@
  * 会话对话视图：历史来自 JSONL，新消息来自 CLI 子进程（--resume）。
  * 首次发送时才 spawn CLI；切换会话后进程保留，返回时继续使用。
  */
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import type { Phase } from "@/cli/machine";
 import type { SlashCommand } from "@/cli/protocol";
@@ -14,7 +14,8 @@ import { EmptyState } from "@/components/ui/EmptyState";
 import { Icon } from "@/components/ui/Icon";
 import { Kbd, StatusPill, type Tone } from "@/components/ui/StatusDot";
 import { TextArea } from "@/components/ui/TextField";
-import { itemsFromCli, itemsFromHistory } from "@/lib/chatItems";
+import { itemsFromCli, itemsFromHistory, type ChatItem } from "@/lib/chatItems";
+import { copyText } from "@/lib/clipboard";
 import { startOptions } from "@/lib/cliOptions";
 import { errorText, ipc } from "@/lib/ipc";
 import type { SessionDetail, SessionSummary } from "@/lib/types";
@@ -36,7 +37,17 @@ const PHASE: Record<Phase, { tone: Tone; label: string }> = {
 
 const isMac = /Mac/.test(navigator.userAgent);
 
-export function ChatView({ session, isNew = false, onChanged }: { session: SessionSummary; isNew?: boolean; onChanged: () => void }) {
+export function ChatView({
+  session,
+  isNew = false,
+  onChanged,
+  onFork,
+}: {
+  session: SessionSummary;
+  isNew?: boolean;
+  onChanged: () => void;
+  onFork?: (s: SessionSummary) => void;
+}) {
   const cfg = useConfig((s) => s.config);
   const [detail, setDetail] = useState<SessionDetail | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
@@ -52,6 +63,7 @@ export function ChatView({ session, isNew = false, onChanged }: { session: Sessi
   const newSidNotified = useRef(false);
   /** 已发送但 CLI 尚未回显的用户消息（--resume 下 CLI 可能不回显） */
   const [pending, setPending] = useState<{ runId: string; text: string; index: number } | null>(null);
+  const [pendingDelete, setPendingDelete] = useState<ChatItem | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
   const stick = useRef(true);
 
@@ -196,6 +208,42 @@ export function ChatView({ session, isNew = false, onChanged }: { session: Sessi
     void doSend(text);
   };
 
+  const handleCopy = useCallback(async (text: string) => copyText(text), []);
+  const handleFork = useCallback(
+    async (uuid: string) => {
+      try {
+        const forked = await ipc.sessionFork(session.id, uuid);
+        onFork?.(forked);
+      } catch (e) {
+        setError(errorText(e));
+      }
+    },
+    [session.id, onFork],
+  );
+  const handleDeleteRequest = useCallback((item: ChatItem) => setPendingDelete(item), []);
+
+  const confirmDelete = async () => {
+    const item = pendingDelete;
+    setPendingDelete(null);
+    if (!item?.uuid) return;
+    setError(null);
+    try {
+      // 先断开正在运行的进程，避免它继续持有旧的上下文
+      if (runId) {
+        const r = useRuns.getState().runs[runId];
+        if (r?.state.process === "alive") await useRuns.getState().stop(runId);
+        sessionRuns.delete(session.id);
+        setRunId(null);
+      }
+      await ipc.sessionDeleteMessage(session.id, item.uuid);
+      const d = await ipc.sessionMessages(session.id);
+      setDetail(d);
+      onChanged();
+    } catch (e) {
+      setError(errorText(e));
+    }
+  };
+
   const head = run?.state.pending[0];
   const runSlice: RunSlice | undefined = run;
 
@@ -260,19 +308,25 @@ export function ChatView({ session, isNew = false, onChanged }: { session: Sessi
               />
             )}
             {historyItems.map((item) => (
-              <ChatMessageView key={item.key} item={item} />
+              <ChatMessageView
+                key={item.key}
+                item={item}
+                onCopy={handleCopy}
+                onFork={isNew ? undefined : handleFork}
+                onDelete={isNew || session.live ? undefined : handleDeleteRequest}
+              />
             ))}
             {beforeMark.map((item) => (
-              <ChatMessageView key={item.key} item={item} />
+              <ChatMessageView key={item.key} item={item} onCopy={handleCopy} />
             ))}
             {pending && !echoed && (
               <ChatMessageView
                 key="pending-user"
-                item={{ key: "pending", role: "user", text: pending.text, thinking: null, tools: [], timestamp: null }}
+                item={{ key: "pending", role: "user", uuid: null, text: pending.text, thinking: null, tools: [], timestamp: null }}
               />
             )}
             {afterMark.map((item) => (
-              <ChatMessageView key={item.key} item={item} />
+              <ChatMessageView key={item.key} item={item} onCopy={handleCopy} />
             ))}
             {partial && (
               <div className="mb-7">
@@ -439,6 +493,20 @@ export function ChatView({ session, isNew = false, onChanged }: { session: Sessi
       </div>
 
       {previewOpen && <PreviewPanel cwd={cwd} onClose={() => setPreviewOpen(false)} />}
+
+      <ConfirmDialog
+        open={pendingDelete !== null}
+        title="删除这条消息？"
+        description={
+          pendingDelete?.role === "user"
+            ? "会从会话记录中删除这条用户输入，以及它之后的回复和工具结果。原文件会备份到 Loom 配置目录；当前进程会断开，下次发送时重新 resume。"
+            : "会从会话记录中删除这条回复及其工具结果。原文件会备份到 Loom 配置目录；当前进程会断开，下次发送时重新 resume。"
+        }
+        confirmLabel="删除"
+        danger
+        onCancel={() => setPendingDelete(null)}
+        onConfirm={() => void confirmDelete()}
+      />
 
       <ConfirmDialog
         open={confirmLive !== null}

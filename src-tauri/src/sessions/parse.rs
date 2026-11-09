@@ -27,6 +27,8 @@ pub struct ToolResult {
 pub struct ChatMessage {
     /// user | assistant | system
     pub role: String,
+    /// 该行 JSONL 的 uuid，用于分叉 / 删除定位
+    pub uuid: Option<String>,
     pub timestamp: Option<String>,
     pub text: Option<String>,
     pub thinking: Option<String>,
@@ -38,6 +40,7 @@ impl ChatMessage {
     fn new(role: &str) -> Self {
         Self {
             role: role.into(),
+            uuid: None,
             timestamp: None,
             text: None,
             thinking: None,
@@ -86,6 +89,7 @@ pub fn entry_to_message(v: &Value) -> Option<ChatMessage> {
     }
     let msg = v.get("message")?;
     let mut out = ChatMessage::new(kind);
+    out.uuid = v.get("uuid").and_then(Value::as_str).map(str::to_string);
     out.timestamp = v.get("timestamp").and_then(Value::as_str).map(str::to_string);
 
     match msg.get("content") {

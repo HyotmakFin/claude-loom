@@ -11,7 +11,7 @@ use std::{
 };
 
 use serde::{Deserialize, Serialize};
-use serde_json::Value;
+use serde_json::{json, Value};
 
 use super::parse::{entry_to_message, iso_to_millis, ChatMessage};
 use crate::{cli::ndjson, config, paths};
@@ -330,7 +330,7 @@ pub fn scan(app: &tauri::AppHandle, query: Option<&str>, include_archived: bool)
     Ok(out)
 }
 
-fn find_file(session_id: &str) -> Result<PathBuf, String> {
+pub fn find_file(session_id: &str) -> Result<PathBuf, String> {
     if session_id.is_empty()
         || !session_id.chars().all(|c| c.is_ascii_alphanumeric() || c == '-' || c == '_')
     {
@@ -397,4 +397,293 @@ pub fn delete_file(session_id: &str) -> Result<(), String> {
     std::fs::remove_file(&path).map_err(|e| format!("删除失败：{e}"))?;
     cache().lock().unwrap().remove(&path);
     Ok(())
+}
+
+
+// ── 分叉 / 删除 ───────────────────────────────────────────────────────
+
+fn uuid_of(v: &Value) -> Option<&str> {
+    v.get("uuid").and_then(Value::as_str)
+}
+
+fn is_user_text(v: &Value) -> bool {
+    if v.get("type").and_then(Value::as_str) != Some("user") {
+        return false;
+    }
+    match v.pointer("/message/content") {
+        Some(Value::String(s)) => !s.trim().is_empty(),
+        Some(Value::Array(blocks)) => {
+            let mut has_text = false;
+            for b in blocks {
+                match b.get("type").and_then(Value::as_str) {
+                    Some("text") => has_text = true,
+                    Some("tool_result") => {}
+                    _ => {}
+                }
+            }
+            has_text
+        }
+        _ => false,
+    }
+}
+
+fn is_tool_result_only(v: &Value) -> bool {
+    if v.get("type").and_then(Value::as_str) != Some("user") {
+        return false;
+    }
+    match v.pointer("/message/content") {
+        Some(Value::Array(blocks)) => !blocks.is_empty() && blocks.iter().all(|b| {
+            b.get("type").and_then(Value::as_str) == Some("tool_result")
+        }),
+        _ => false,
+    }
+}
+
+/// 把 sessionId / session_id 字段改写成新会话 id。
+fn rewrite_session_id(v: &mut Value, new_id: &str) {
+    if let Some(obj) = v.as_object_mut() {
+        if obj.contains_key("sessionId") {
+            obj.insert("sessionId".into(), Value::String(new_id.into()));
+        }
+        if obj.contains_key("session_id") {
+            obj.insert("session_id".into(), Value::String(new_id.into()));
+        }
+    }
+}
+
+fn read_entries(path: &Path) -> Result<Vec<Value>, String> {
+    let text = std::fs::read_to_string(path).map_err(|e| format!("读取会话失败：{e}"))?;
+    Ok(text
+        .lines()
+        .filter(|l| !l.trim().is_empty())
+        .filter_map(|l| serde_json::from_str::<Value>(l).ok())
+        .collect())
+}
+
+fn write_entries(path: &Path, entries: &[Value]) -> Result<(), String> {
+    let mut out = String::with_capacity(entries.len() * 256);
+    for v in entries {
+        out.push_str(&serde_json::to_string(v).map_err(|e| e.to_string())?);
+        out.push('\n');
+    }
+    let tmp = path.with_extension("jsonl.tmp");
+    std::fs::write(&tmp, out).map_err(|e| format!("写入会话失败：{e}"))?;
+    std::fs::rename(&tmp, path).map_err(|e| format!("保存会话失败：{e}"))?;
+    cache().lock().unwrap().remove(path);
+    Ok(())
+}
+
+fn backup(app: &tauri::AppHandle, session_id: &str, text: &str) -> Result<(), String> {
+    let dir = crate::paths::loom_config_dir(app)?.join("session-backups");
+    std::fs::create_dir_all(&dir).map_err(|e| format!("创建备份目录失败：{e}"))?;
+    let ts = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .map(|d| d.as_secs())
+        .unwrap_or(0);
+    std::fs::write(dir.join(format!("{session_id}-{ts}.jsonl")), text).map_err(|e| format!("备份失败：{e}"))
+}
+
+fn next_user_text(entries: &[Value], from: usize) -> usize {
+    entries
+        .iter()
+        .enumerate()
+        .skip(from)
+        .find(|(_, v)| is_user_text(v))
+        .map(|(i, _)| i)
+        .unwrap_or(entries.len())
+}
+
+fn fork_entries(entries: &[Value], upto_uuid: &str, new_id: &str, title: &str) -> Result<Vec<Value>, String> {
+    let target = entries
+        .iter()
+        .position(|v| uuid_of(v) == Some(upto_uuid))
+        .ok_or_else(|| "找不到要分叉的消息".to_string())?;
+
+    // 分叉点是助手回复时，把它所在的一轮补全（工具结果、同轮后续回复），
+    // 避免新的会话停在未完成的工具调用上。
+    let end = if entries[target].get("type").and_then(Value::as_str) == Some("assistant") {
+        next_user_text(entries, target + 1)
+    } else {
+        target + 1
+    };
+
+    let mut out: Vec<Value> = entries[..end]
+        .iter()
+        .map(|v| {
+            let mut v = v.clone();
+            rewrite_session_id(&mut v, new_id);
+            v
+        })
+        .collect();
+    out.push(json!({
+        "type": "ai-title",
+        "aiTitle": format!("分叉 · {title}"),
+        "sessionId": new_id,
+    }));
+    Ok(out)
+}
+
+pub fn fork_session(app: &tauri::AppHandle, session_id: &str, upto_uuid: &str) -> Result<SessionSummary, String> {
+    let path = find_file(session_id)?;
+    let entries = read_entries(&path)?;
+    let new_id = uuid::Uuid::new_v4().to_string();
+    let title = index_file(&path)
+        .title
+        .filter(|t| !t.is_empty())
+        .unwrap_or_else(|| "会话".to_string());
+    let out = fork_entries(&entries, upto_uuid, &new_id, &title)?;
+
+    let dir = path.parent().ok_or("无法定位项目目录")?.to_path_buf();
+    let new_path = dir.join(format!("{new_id}.jsonl"));
+    write_entries(&new_path, &out)?;
+    summary_for(app, &new_id, &new_path)
+}
+
+/// 删除一条消息：用户消息会连同其后的回复一起删除；
+/// assistant 消息会连同本轮后续的工具/回复一起删除，直到下一条用户文本消息。
+pub fn delete_message(app: &tauri::AppHandle, session_id: &str, uuid: &str) -> Result<(), String> {
+    let path = find_file(session_id)?;
+    let raw = std::fs::read_to_string(&path).map_err(|e| format!("读取会话失败：{e}"))?;
+    let mut entries = read_entries(&path)?;
+    let idx = entries
+        .iter()
+        .position(|v| uuid_of(v) == Some(uuid))
+        .ok_or_else(|| "找不到要删除的消息".to_string())?;
+
+    if !is_user_text(&entries[idx]) && entries[idx].get("type").and_then(Value::as_str) != Some("assistant") {
+        return Err("只能删除用户输入或助手回复".into());
+    }
+
+    // 用户消息：删除它和随后的整轮回复；
+    // 助手消息：删除它所在的整轮助手输出（保留前面的用户输入）。
+    let (start, end) = if is_user_text(&entries[idx]) {
+        (idx, next_user_text(&entries, idx + 1))
+    } else {
+        let turn_start = entries[..idx]
+            .iter()
+            .rposition(is_user_text)
+            .map(|i| i + 1)
+            .unwrap_or(0);
+        (turn_start, next_user_text(&entries, idx + 1))
+    };
+
+    backup(app, session_id, &raw)?;
+    remove_range(&mut entries, start, end);
+    write_entries(&path, &entries)
+}
+
+fn remove_range(entries: &mut Vec<Value>, start: usize, end: usize) {
+    let removed: std::collections::HashSet<String> = entries[start..end]
+        .iter()
+        .filter_map(|v| uuid_of(v).map(str::to_string))
+        .collect();
+    let parent_of: std::collections::HashMap<String, Option<String>> = entries
+        .iter()
+        .filter_map(|v| {
+            let id = uuid_of(v)?.to_string();
+            Some((id, v.get("parentUuid").and_then(Value::as_str).map(str::to_string)))
+        })
+        .collect();
+
+    let nearest_kept = |mut parent: Option<String>| -> Option<String> {
+        let mut guard = 0;
+        while let Some(p) = parent {
+            if !removed.contains(&p) {
+                return Some(p);
+            }
+            guard += 1;
+            if guard > 10_000 {
+                return None;
+            }
+            parent = parent_of.get(&p).cloned().flatten();
+        }
+        None
+    };
+
+    entries.drain(start..end);
+    for v in entries.iter_mut() {
+        if let Some(obj) = v.as_object_mut() {
+            if let Some(p) = obj.get("parentUuid").and_then(Value::as_str).map(str::to_string) {
+                match nearest_kept(Some(p.clone())) {
+                    Some(np) => {
+                        obj.insert("parentUuid".into(), Value::String(np.clone()));
+                        if let Some(leaf) = obj.get("leafUuid").and_then(Value::as_str) {
+                            if leaf == p {
+                                obj.insert("leafUuid".into(), Value::String(np));
+                            }
+                        }
+                    }
+                    None => {
+                        obj.insert("parentUuid".into(), Value::Null);
+                    }
+                }
+            }
+        }
+    }
+}
+
+
+#[cfg(test)]
+mod edit_tests {
+    use super::*;
+
+    fn entry(uuid: &str, parent: Option<&str>, kind: &str, content: Value) -> Value {
+        json!({
+            "type": kind,
+            "uuid": uuid,
+            "parentUuid": parent,
+            "sessionId": "old",
+            "message": { "role": kind, "content": content },
+        })
+    }
+
+    fn sample() -> Vec<Value> {
+        vec![
+            entry("u1", None, "user", json!("你好")),
+            entry("a1", Some("u1"), "assistant", json!([{"type":"text","text":"在"}] )),
+            entry("u2", Some("a1"), "user", json!("继续")),
+            entry("a2", Some("u2"), "assistant", json!([{"type":"text","text":"好"}] )),
+        ]
+    }
+
+    #[test]
+    fn fork_cuts_at_message_and_rewrites_session() {
+        let out = fork_entries(&sample(), "a1", "new-id", "原标题").unwrap();
+        assert_eq!(out.len(), 3); // u1, a1, 标题
+        assert_eq!(out[0]["sessionId"], "new-id");
+        assert_eq!(out[1]["uuid"], "a1");
+        assert_eq!(out[2]["aiTitle"], "分叉 · 原标题");
+        assert!(fork_entries(&sample(), "missing", "n", "t").is_err());
+    }
+
+    #[test]
+    fn delete_assistant_rechains_next_user() {
+        let mut e = sample();
+        // 删除 a1（assistant），后续 u2/a2 保留
+        remove_range(&mut e, 1, 2);
+        assert_eq!(e.len(), 3);
+        assert_eq!(e[1]["uuid"], "u2");
+        assert_eq!(e[1]["parentUuid"], "u1"); // 跨过被删除的 a1 接到 u1
+        assert_eq!(e[2]["parentUuid"], "u2");
+    }
+
+    #[test]
+    fn delete_user_removes_turn_and_orphans_to_null() {
+        let mut e = sample();
+        // 删除 u1 及其后的 a1（下一处用户文本是 u2）
+        remove_range(&mut e, 0, 2);
+        assert_eq!(e.len(), 2);
+        assert_eq!(e[0]["uuid"], "u2");
+        assert_eq!(e[0]["parentUuid"], Value::Null); // u1/a1 都被删，链头置空
+        assert_eq!(e[1]["parentUuid"], "u2");
+    }
+
+    #[test]
+    fn tool_result_only_detection() {
+        let v = json!({"type":"user","message":{"role":"user","content":[{"type":"tool_result","tool_use_id":"t","content":"x"}]}});
+        assert!(is_tool_result_only(&v));
+        assert!(!is_user_text(&v));
+        let t = json!({"type":"user","message":{"role":"user","content":"hi"}});
+        assert!(is_user_text(&t));
+    }
 }

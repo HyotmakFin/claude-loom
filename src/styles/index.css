@@ -139,3 +139,28 @@
   content-visibility: auto;
   contain-intrinsic-size: auto 160px;
 }
+
+/* 代码块复制按钮 */
+.md .loom-code { position: relative; margin: 0.7em 0; }
+.md .loom-code > pre { margin: 0; }
+.loom-copy {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  z-index: 1;
+  font-family: var(--font-sans);
+  font-size: 11px;
+  line-height: 16px;
+  padding: 0 6px;
+  color: var(--color-ink-muted);
+  background: var(--color-surface);
+  border: 1px solid var(--color-line);
+  border-radius: var(--radius-chip);
+  opacity: 0;
+  transition: opacity 0.15s;
+  cursor: pointer;
+}
+.loom-code:hover .loom-copy,
+.loom-copy:focus-visible,
+.loom-copy.copied { opacity: 1; }
+.loom-copy:hover { color: var(--color-ink); background: var(--color-sunken); }

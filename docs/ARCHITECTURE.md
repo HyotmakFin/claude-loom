@@ -146,3 +146,16 @@ Loom 不支持的 control_request 子类型由 Rust 直接回复 `subtype:"error
   输入 `/` 时如该会话尚未连接，会静默启动 CLI（不产生模型请求）以获取列表。
 - **新会话**：SessionsView 先用伪 SessionSummary 打开 ChatView，首次发送时不带 `--resume`；
   拿到 system init 的 sessionId 后刷新列表，正式会话随即出现。
+
+
+## 消息操作与帧率补丁
+
+- 分叉：`session_fork(sessionId, uptoUuid)` 把 JSONL 截到该助手回复所在整轮结束，
+  生成新 UUID 并改写每行的 `sessionId`，写入同项目的 `<newId>.jsonl`，标题为「分叉 · 原标题」。
+- 删除：`session_delete_message(sessionId, uuid)` 按整轮删除（用户消息含随后回复；
+  助手消息含同轮工具调用/结果），重接 `parentUuid`，原文件备份到
+  `session-backups/`。正在其他终端运行的会话禁用删除。
+- 复制：Tauri clipboard-manager 插件；代码块复制按钮由 Markdown 渲染时注入，事件委托处理。
+- 帧率：WebKitGTK 的 VBlankMonitor 线程 60Hz。`scripts/fps-patch/vblank_patch.c`
+  通过 `LD_PRELOAD` 只缩短该线程的 `nanosleep`；Rust 在 GTK 初始化前 re-exec 注入，
+  库位于 `/usr/lib/loom/libloom-vblank.so`（AppImage 中由 resources 提供）。

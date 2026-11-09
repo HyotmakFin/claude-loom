@@ -1,4 +1,6 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type MouseEvent } from "react";
+
+import { copyText } from "@/lib/clipboard";
 
 import { useMarkdown } from "@/lib/useMarkdown";
 
@@ -30,6 +32,22 @@ export function Markdown({ source, className = "" }: { source: string; className
 
   const html = useMarkdown(visible ? source : "");
 
+  const onCopyClick = (e: MouseEvent<HTMLDivElement>) => {
+    const btn = (e.target as HTMLElement).closest<HTMLButtonElement>("[data-loom-copy]");
+    if (!btn) return;
+    const pre = btn.closest(".loom-code")?.querySelector("pre");
+    const text = pre?.textContent ?? "";
+    void copyText(text).then((ok) => {
+      if (!ok) return;
+      btn.textContent = "已复制";
+      btn.classList.add("copied");
+      setTimeout(() => {
+        btn.textContent = "复制";
+        btn.classList.remove("copied");
+      }, 1200);
+    });
+  };
+
   if (!visible) {
     return (
       <div ref={ref} className={`md whitespace-pre-wrap ${className}`} aria-busy="true">
@@ -37,5 +55,12 @@ export function Markdown({ source, className = "" }: { source: string; className
       </div>
     );
   }
-  return <div ref={ref} className={`md ${className}`} dangerouslySetInnerHTML={{ __html: html }} />;
+  return (
+    <div
+      ref={ref}
+      className={`md ${className}`}
+      onClick={onCopyClick}
+      dangerouslySetInnerHTML={{ __html: html }}
+    />
+  );
 }

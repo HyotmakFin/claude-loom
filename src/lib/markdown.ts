@@ -111,7 +111,9 @@ export async function renderMarkdown(source: string, theme: ThemeName = "light")
     }
   });
 
-  return html.replace(/<div data-loom-code="(\d+)"><\/div>/g, (_, i: string) => rendered[Number(i)] ?? "");
+  const wrap = (block: string) =>
+    `<div class="loom-code"><button type="button" class="loom-copy" data-loom-copy>复制</button>${block}</div>`;
+  return html.replace(/<div data-loom-code="(\d+)"><\/div>/g, (_, i: string) => wrap(rendered[Number(i)] ?? ""));
 }
 
 /** 给纯代码文本高亮（预览面板用） */

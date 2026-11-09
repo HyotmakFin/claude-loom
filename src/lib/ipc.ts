@@ -52,6 +52,10 @@ export const ipc = {
   sessionDelete: (sessionId: string) => invoke<void>("session_delete", { sessionId }),
   sessionSetFlag: (sessionId: string, pinned?: boolean, archived?: boolean) =>
     invoke<void>("session_set_flag", { sessionId, pinned, archived }),
+  sessionFork: (sessionId: string, uptoUuid: string) =>
+    invoke<SessionSummary>("session_fork", { sessionId, uptoUuid }),
+  sessionDeleteMessage: (sessionId: string, uuid: string) =>
+    invoke<void>("session_delete_message", { sessionId, uuid }),
 
   // Skill
   skillsList: () => invoke<SkillInfo[]>("skills_list"),

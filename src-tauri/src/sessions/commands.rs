@@ -34,6 +34,20 @@ pub async fn session_delete(app: AppHandle, session_id: String) -> Result<(), St
 }
 
 #[tauri::command]
+pub async fn session_fork(app: AppHandle, session_id: String, upto_uuid: String) -> Result<SessionSummary, String> {
+    tauri::async_runtime::spawn_blocking(move || index::fork_session(&app, &session_id, &upto_uuid))
+        .await
+        .map_err(|e| e.to_string())?
+}
+
+#[tauri::command]
+pub async fn session_delete_message(app: AppHandle, session_id: String, uuid: String) -> Result<(), String> {
+    tauri::async_runtime::spawn_blocking(move || index::delete_message(&app, &session_id, &uuid))
+        .await
+        .map_err(|e| e.to_string())?
+}
+
+#[tauri::command]
 pub fn session_set_flag(
     app: AppHandle,
     session_id: String,

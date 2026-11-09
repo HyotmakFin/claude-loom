@@ -14,6 +14,8 @@ export interface ToolView {
 export interface ChatItem {
   key: string;
   role: "user" | "assistant" | "system";
+  /** 历史消息对应的 JSONL uuid；实时消息为 null */
+  uuid: string | null;
   text: string | null;
   thinking: string | null;
   tools: ToolView[];
@@ -38,9 +40,9 @@ class Builder {
   items: ChatItem[] = [];
   results = new Map<string, { content: string; isError: boolean }>();
 
-  addRaw(role: ChatItem["role"], content: RawContent, timestamp: string | null) {
+  addRaw(role: ChatItem["role"], content: RawContent, timestamp: string | null, uuid: string | null = null) {
     if (typeof content === "string") {
-      if (content.trim()) this.items.push({ key: cryptoKey(), role, text: content, thinking: null, tools: [], timestamp });
+      if (content.trim()) this.items.push({ key: cryptoKey(), role, uuid, text: content, thinking: null, tools: [], timestamp });
       return;
     }
     if (!Array.isArray(content)) return;
@@ -67,6 +69,7 @@ class Builder {
     this.items.push({
       key: cryptoKey(),
       role,
+      uuid,
       text: texts.length ? texts.join("\n") : null,
       thinking: thinking.length ? thinking.join("\n\n") : null,
       tools,
@@ -106,6 +109,7 @@ export function itemsFromHistory(messages: ChatMessage[]): ChatItem[] {
     b.items.push({
       key: cryptoKey(),
       role: m.role,
+      uuid: m.uuid,
       text: m.text,
       thinking: m.thinking,
       tools: m.toolUses.map((t) => ({ id: t.id, name: t.name, input: (t.input as Record<string, unknown>) ?? {} })),
@@ -120,13 +124,14 @@ export function itemsFromCli(messages: CliMessage[]): ChatItem[] {
   for (const m of messages) {
     if (m.type === "user" || m.type === "assistant") {
       const msg = (m as { message?: { content?: RawContent } }).message;
-      b.addRaw(m.type, msg?.content, (m as { timestamp?: string }).timestamp ?? null);
+      b.addRaw(m.type, msg?.content, (m as { timestamp?: string }).timestamp ?? null, null);
     } else if (m.type === "result") {
       const r = m as { is_error?: boolean; result?: string; subtype?: string };
       if (r.is_error || (r.subtype && !r.subtype.startsWith("success"))) {
         b.items.push({
           key: cryptoKey(),
           role: "system",
+          uuid: null,
           text: r.result || `本轮以 ${r.subtype ?? "错误"} 结束`,
           thinking: null,
           tools: [],

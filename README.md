@@ -21,6 +21,8 @@ Loom 只是一层薄壳：不负责安装 CLI，也不处理网络或模型适�
 - **插件**：列出已安装插件；添加外部插件目录并通过 `--plugin-dir` 传给 CLI。
 - **斜杠命令**：输入 `/` 实时预览当前目录可用的命令 / Skill（来自 CLI 的 initialize），
   ↑↓ 选择，Enter 或 Tab 填入。
+- **消息操作**：复制整条消息或代码块；从任意助手回复分叉出新会话；
+  删除用户输入或助手回复（按整轮删除，原文件自动备份到 Loom 配置目录）。
 - **新会话**：会话列表顶部的「新会话」，选择目录后直接开始，无需已有历史。
 - **预览**：与对话并排、可折叠；Markdown、图片、代码高亮（Shiki），
   localhost 网页内嵌，其余一律可在系统浏览器打开。
@@ -110,13 +112,19 @@ npm run tauri build -- --target universal-apple-darwin   # macOS 通用二进制
 
 Tauri 不支持交叉打包，每个平台都需要在本平台（或对应的 CI runner）上构建。
 
-## Linux 帧率说明
+## Linux 帧率
 
 WebKitGTK 在 Wayland 下拿不到 displayID 时会回退到内部 60Hz 的 vblank 定时器
-（`DisplayVBlankMonitorTimer`，`FullSpeedFramesPerSecond = 60`），因此 WebView 的
-`requestAnimationFrame` 最高 60fps，与显示器刷新率（如 200Hz）无关。这是 WebKitGTK
-的限制，Tauri / Loom 没有可调开关；窗口分辨率与尺寸不受影响。界面已针对长会话做
-离屏懒渲染与组件 memo，避免 60fps 之外的额外卡顿。
+（`DisplayVBlankMonitorTimer`，`FullSpeedFramesPerSecond = 60`）。Loom 自带一个很小的
+`LD_PRELOAD` 补丁（`scripts/fps-patch/vblank_patch.c`），只加速名为 `VBlankMonitor`
+的那个线程的休眠，把定时器提到 200Hz，不改 WebKit 二进制：
+
+- 默认启用（安装包已包含 `libloom-vblank.so`，启动时自动 re-exec 注入）
+- `LOOM_DISABLE_VBLANK_PATCH=1` 关闭
+- `LOOM_VBLANK_HZ=144` 等可指定目标帧率（默认 200）
+
+实测 2560×1440@200Hz 下 rAF 从 62fps 提升到 190fps。补丁只影响该线程，其他线程的
+sleep 原样透传。
 
 ## 跨平台验证清单
 
