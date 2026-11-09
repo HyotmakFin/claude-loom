@@ -12,7 +12,7 @@ optdepends=('claude-code: Claude Code CLI（也可通过 npm 全局安装）')
 # 上游仓库名是 loom，AUR 包名用 claude-loom（loom 已被占用）
 _upstream=claude-loom
 source=("$_upstream-$pkgver.tar.gz::https://github.com/HyotMakFin/claude-loom/archive/v$pkgver.tar.gz")
-sha256sums=('33f27f4a6982ba61b76ec60196541c7daa759a9cf0ed4b657ab921e3622ad62f')
+sha256sums=('a7917f2475828b7515382c38d33c8d647c21bd25b4669b8b69ed9143f4655d14')
 
 prepare() {
   cd "$srcdir/$_upstream-$pkgver"
