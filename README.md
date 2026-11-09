@@ -34,12 +34,13 @@ API Key 以明文保存在 Loom 的配置文件中（Unix 下权限 0600），�
 
 ## 安装（Arch Linux）
 
+从 [Releases](https://github.com/HyotMakFin/claude-loom/releases/latest) 下载 `.pkg.tar.zst`：
+
 ```bash
-cd packaging && makepkg -si     # AUR 包名：claude-loom
+sudo pacman -U claude-loom-0.1.0-1-x86_64.pkg.tar.zst
 ```
 
-发布到 AUR 的步骤见 [packaging/README.md](packaging/README.md)。其他平台用
-`npm run tauri build` 生成安装包。
+自行构建见 [packaging/README.md](packaging/README.md)。其他平台用 `npm run tauri build` 生成安装包。
 
 ## 品牌
 

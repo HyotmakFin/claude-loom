@@ -9,5 +9,6 @@ tsconfig.tsbuildinfo
 packaging/src
 packaging/pkg
 packaging/*.pkg.tar.*
+packaging/.SRCINFO
 packaging/*.tar.gz
 packaging/*.log
