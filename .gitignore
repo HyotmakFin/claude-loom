@@ -9,5 +9,5 @@ tsconfig.tsbuildinfo
 packaging/src
 packaging/pkg
 packaging/*.pkg.tar.*
-packaging/loom-*.tar.gz
+packaging/*.tar.gz
 packaging/*.log

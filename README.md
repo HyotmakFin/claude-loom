@@ -35,8 +35,7 @@ API Key 以明文保存在 Loom 的配置文件中（Unix 下权限 0600），�
 ## 安装（Arch Linux）
 
 ```bash
-scripts/make-aur-source.sh
-cd packaging && makepkg -si
+cd packaging && makepkg -si     # AUR 包名：claude-loom
 ```
 
 发布到 AUR 的步骤见 [packaging/README.md](packaging/README.md)。其他平台用
