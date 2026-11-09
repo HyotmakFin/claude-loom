@@ -12,8 +12,10 @@ Loom 只是一层薄壳：不负责安装 CLI，也不处理网络或模型适�
 - **会话**：读取 `~/.claude/projects/*/*.jsonl` 与本机运行记录 `~/.claude/sessions/*.json`，
   列出标题、项目、时间、消息数与运行状态；支持按标题/内容搜索、置顶、归档、删除。
   点击会话查看历史，发送消息时以 `claude --resume <sessionId>` 续聊。
-- **BYOK**：多套配置，注入 `ANTHROPIC_BASE_URL` / `ANTHROPIC_API_KEY` 与
-  `ANTHROPIC_DEFAULT_{OPUS,SONNET,HAIKU}_MODEL`；Key 输入默认掩码。
+- **BYOK**：多套配置，按 cc-switch 的约定注入 `ANTHROPIC_BASE_URL`、
+  `ANTHROPIC_AUTH_TOKEN` 或 `ANTHROPIC_API_KEY`，以及
+  `ANTHROPIC_MODEL`、`ANTHROPIC_DEFAULT_{OPUS,SONNET,FABLE,HAIKU}_MODEL(_NAME)`、
+  `CLAUDE_CODE_SUBAGENT_MODEL`；支持显示名与 1M（`[1m]`）标记，Key 默认掩码。
 - **Skill**：扫描 `~/.claude/skills/*/SKILL.md`，启停（重命名为 `SKILL.md.disabled`）、
   编辑 frontmatter 与正文、新建 Skill。
 - **插件**：列出已安装插件；添加外部插件目录并通过 `--plugin-dir` 传给 CLI。
@@ -37,7 +39,7 @@ API Key 以明文保存在 Loom 的配置文件中（Unix 下权限 0600），�
 从 [Releases](https://github.com/HyotMakFin/claude-loom/releases/latest) 下载 `.pkg.tar.zst`：
 
 ```bash
-sudo pacman -U claude-loom-0.1.0-1-x86_64.pkg.tar.zst
+sudo pacman -U claude-loom-0.2.0-1-x86_64.pkg.tar.zst
 ```
 
 自行构建见 [packaging/README.md](packaging/README.md)。其他平台用 `npm run tauri build` 生成安装包。

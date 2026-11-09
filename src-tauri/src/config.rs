@@ -12,13 +12,32 @@ use crate::paths;
 
 const FILE: &str = "config.json";
 
+/// 模型映射。字段保持扁平是为了兼容旧配置（旧版只有 opus/sonnet/haiku 三个字符串）。
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase", default)]
 pub struct ModelMap {
-    /// 形如 `claude-opus-4-6` 的自定义模型名；留空则沿用 CLI 默认
+    /// 实际请求模型名，写入 ANTHROPIC_DEFAULT_*_MODEL；留空则沿用 CLI 默认
     pub opus: String,
     pub sonnet: String,
     pub haiku: String,
+    /// Claude Code 新增的 Fable 角色
+    pub fable: String,
+    /// 子代理模型 → CLAUDE_CODE_SUBAGENT_MODEL
+    pub subagent: String,
+    /// 默认兜底模型 → ANTHROPIC_MODEL
+    pub fallback: String,
+    /// /model 菜单里显示的名称 → ANTHROPIC_DEFAULT_*_MODEL_NAME
+    pub opus_name: String,
+    pub sonnet_name: String,
+    pub haiku_name: String,
+    pub fable_name: String,
+    /// 模型名追加 `[1m]`，声明 1M 上下文
+    pub opus_million: bool,
+    pub sonnet_million: bool,
+    pub haiku_million: bool,
+    pub fable_million: bool,
+    pub subagent_million: bool,
+    pub fallback_million: bool,
 }
 
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
@@ -26,8 +45,14 @@ pub struct ModelMap {
 pub struct Profile {
     pub id: String,
     pub name: String,
+    pub notes: String,
+    pub website: String,
     pub base_url: String,
     pub api_key: String,
+    /// ANTHROPIC_AUTH_TOKEN（默认，多数中转网关用）或 ANTHROPIC_API_KEY
+    pub auth_field: String,
+    /// 请求地址是否为完整 URL（仅用于界面展示/校验，不改变 BASE_URL 的写法）
+    pub full_url: bool,
     pub models: ModelMap,
 }
 
@@ -123,7 +148,19 @@ mod tests {
                 name: "官方代理".into(),
                 base_url: "https://example.test".into(),
                 api_key: "sk-x".into(),
-                models: ModelMap { sonnet: "m-s".into(), ..Default::default() },
+                notes: String::new(),
+                website: String::new(),
+                auth_field: "ANTHROPIC_AUTH_TOKEN".into(),
+                full_url: false,
+                models: ModelMap {
+                sonnet: "m-s".into(),
+                fable: "m-f".into(),
+                subagent: "m-sub".into(),
+                fallback: "m-def".into(),
+                sonnet_name: "Sonnet 显示名".into(),
+                fable_million: true,
+                ..Default::default()
+            },
             }],
             plugin_dirs: vec![PluginDir { path: PathBuf::from("a"), enabled: true }],
             session_flags: HashMap::from([("s".to_string(), SessionFlag { pinned: true, archived: false })]),
@@ -132,6 +169,11 @@ mod tests {
         };
         let back: LoomConfig = serde_json::from_str(&serde_json::to_string(&cfg).unwrap()).unwrap();
         assert_eq!(back.profiles[0].models.sonnet, "m-s");
+        assert_eq!(back.profiles[0].models.fable, "m-f");
+        assert_eq!(back.profiles[0].models.subagent, "m-sub");
+        assert_eq!(back.profiles[0].models.sonnet_name, "Sonnet 显示名");
+        assert!(back.profiles[0].models.fable_million);
+        assert_eq!(back.profiles[0].auth_field, "ANTHROPIC_AUTH_TOKEN");
         assert!(back.session_flags["s"].pinned);
         // 未知字段不应导致配置无法加载（向前兼容）
         let older: LoomConfig = serde_json::from_str(r#"{"futureField": 1}"#).unwrap();

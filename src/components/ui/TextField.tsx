@@ -9,6 +9,10 @@ const shell =
 
 const input = "min-w-0 flex-1 bg-transparent outline-none placeholder:text-ink-faint disabled:text-ink-faint";
 
+const fieldClass =
+  "w-full rounded-card border border-line bg-surface px-3 font-sans text-[13px] text-ink " +
+  "outline-none transition-colors duration-100 hover:border-line-strong focus:border-accent";
+
 interface FieldProps extends Omit<ComponentProps<"input">, "prefix"> {
   icon?: IconName;
   /** 显示在输入框左侧的小标签，如 "cwd" */
@@ -22,6 +26,15 @@ export function TextField({ icon, prefix, className = "", ...rest }: FieldProps)
       {prefix && <span className="shrink-0 text-[12px] text-ink-faint">{prefix}</span>}
       <input className={input} spellCheck={false} {...rest} />
     </label>
+  );
+}
+
+export function Select({ className = "", ...rest }: ComponentProps<"select">) {
+  return (
+    <select
+      className={`${fieldClass} h-9 appearance-none bg-[url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%239A958B' stroke-width='2' stroke-linecap='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E")] bg-[length:12px] bg-[right_10px_center] bg-no-repeat pr-8 ${className}`}
+      {...rest}
+    />
   );
 }
 

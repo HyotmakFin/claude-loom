@@ -13,13 +13,31 @@ export interface ModelMap {
   opus: string;
   sonnet: string;
   haiku: string;
+  fable: string;
+  subagent: string;
+  fallback: string;
+  opusName: string;
+  sonnetName: string;
+  haikuName: string;
+  fableName: string;
+  opusMillion: boolean;
+  sonnetMillion: boolean;
+  haikuMillion: boolean;
+  fableMillion: boolean;
+  subagentMillion: boolean;
+  fallbackMillion: boolean;
 }
 
 export interface Profile {
   id: string;
   name: string;
+  notes: string;
+  website: string;
   baseUrl: string;
   apiKey: string;
+  /** ANTHROPIC_AUTH_TOKEN（默认）或 ANTHROPIC_API_KEY */
+  authField: string;
+  fullUrl: boolean;
   models: ModelMap;
 }
 

@@ -1,8 +1,9 @@
 /**
- * BYOK：多套配置，注入 ANTHROPIC_BASE_URL / ANTHROPIC_API_KEY 与模型映射。
- * 配置文件位于平台配置目录（Unix 权限 0600），API Key 以明文保存 —— 界面上明确提示。
+ * BYOK：多套配置，字段与注入变量参考 cc-switch 的 Claude Code Provider 编辑器。
+ * 所有值只注入 Loom 启动的 claude 进程，不改动 ~/.claude/settings.json。
  */
-import { useEffect, useState } from "react";
+import { openUrl } from "@tauri-apps/plugin-opener";
+import { useEffect, useState, type ReactNode } from "react";
 
 import { Button } from "@/components/ui/Button";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
@@ -10,21 +11,51 @@ import { EmptyState } from "@/components/ui/EmptyState";
 import { Icon } from "@/components/ui/Icon";
 import { PageHeader } from "@/components/ui/SectionHeader";
 import { Switch } from "@/components/ui/Switch";
-import { TextField } from "@/components/ui/TextField";
-import { profileEnv } from "@/lib/cliOptions";
+import { Select, TextField } from "@/components/ui/TextField";
+import { AUTH_FIELDS, profileEnv, type ModelRoleKey } from "@/lib/cliOptions";
 import { errorText } from "@/lib/ipc";
-import type { Profile } from "@/lib/types";
+import type { ModelMap, Profile } from "@/lib/types";
 import { useConfig } from "@/stores/config";
+
+function blankModels(): ModelMap {
+  return {
+    opus: "", sonnet: "", haiku: "", fable: "", subagent: "", fallback: "",
+    opusName: "", sonnetName: "", haikuName: "", fableName: "",
+    opusMillion: false, sonnetMillion: false, haikuMillion: false, fableMillion: false,
+    subagentMillion: false, fallbackMillion: false,
+  };
+}
 
 function blankProfile(): Profile {
   return {
     id: globalThis.crypto?.randomUUID?.() ?? `p-${Date.now()}`,
     name: "新配置",
+    notes: "",
+    website: "",
     baseUrl: "",
     apiKey: "",
-    models: { opus: "", sonnet: "", haiku: "" },
+    authField: AUTH_FIELDS[0],
+    fullUrl: false,
+    models: blankModels(),
   };
 }
+
+interface RoleDef {
+  key: ModelRoleKey;
+  label: string;
+  placeholder: string;
+  hasName: boolean;
+  hint?: string;
+}
+
+const ROLES: RoleDef[] = [
+  { key: "sonnet", label: "Sonnet", placeholder: "claude-sonnet-…", hasName: true },
+  { key: "opus", label: "Opus", placeholder: "claude-opus-…", hasName: true },
+  { key: "fable", label: "Fable", placeholder: "claude-fable-…", hasName: true },
+  { key: "haiku", label: "Haiku", placeholder: "claude-haiku-…", hasName: true },
+  { key: "subagent", label: "Subagent", placeholder: "子代理模型", hasName: false, hint: "不显示在 /model 菜单" },
+  { key: "fallback", label: "默认兜底", placeholder: "ANTHROPIC_MODEL", hasName: false, hint: "未指定角色时使用" },
+];
 
 export function ByokView() {
   const config = useConfig((s) => s.config);
@@ -60,18 +91,27 @@ export function ByokView() {
     setDirty(true);
   };
 
+  const editModel = (patch: Partial<ModelMap>) => {
+    setDraft((d) => (d ? { ...d, models: { ...d.models, ...patch } } : d));
+    setDirty(true);
+  };
+
   const save = () =>
     act(async () => {
       if (!draft) return;
       if (!draft.name.trim()) throw new Error("请填写配置名称");
+      if (draft.fullUrl && draft.baseUrl && !/^https?:\/\//i.test(draft.baseUrl)) {
+        throw new Error("请求地址需要以 http:// 或 https:// 开头");
+      }
+      const clean: Profile = { ...draft, authField: draft.authField || AUTH_FIELDS[0] };
       await update((cfg) => ({
         ...cfg,
-        profiles: cfg.profiles.some((p) => p.id === draft.id)
-          ? cfg.profiles.map((p) => (p.id === draft.id ? draft : p))
-          : [...cfg.profiles, draft],
-        activeProfileId: cfg.activeProfileId ?? draft.id,
+        profiles: cfg.profiles.some((p) => p.id === clean.id)
+          ? cfg.profiles.map((p) => (p.id === clean.id ? clean : p))
+          : [...cfg.profiles, clean],
+        activeProfileId: cfg.activeProfileId ?? clean.id,
       }));
-      setSelectedId(draft.id);
+      setSelectedId(clean.id);
       setDirty(false);
     });
 
@@ -82,23 +122,22 @@ export function ByokView() {
       setSelectedId(p.id);
     });
 
-  const activate = (id: string) =>
-    act(() => update((cfg) => ({ ...cfg, activeProfileId: id })));
-
+  const activate = (id: string) => act(() => update((cfg) => ({ ...cfg, activeProfileId: id })));
   const envPreview = draft ? profileEnv(draft) : { env: {}, envRemove: [] };
+  const authField = draft?.authField || AUTH_FIELDS[0];
 
   return (
     <div className="flex h-full flex-col">
       <PageHeader
         title="API 配置"
-        hint="BYOK：用自己的 Base URL、Key 与模型映射启动 claude"
+        hint="BYOK：套用 cc-switch 的环境变量约定，支持 Opus / Sonnet / Fable / Haiku / Subagent 映射"
         actions={<Button variant="primary" icon="plus" onClick={create}>新建配置</Button>}
       />
       <div className="flex min-h-0 flex-1">
         <div className="flex w-[280px] shrink-0 flex-col border-r border-line">
           <div className="min-h-0 flex-1 overflow-y-auto p-2">
             {config.profiles.length === 0 ? (
-              <EmptyState icon="key" title="还没有配置" hint="新建一套配置即可启用 BYOK；不配置时会直接使用 CLI 的默认鉴权。" />
+              <EmptyState icon="key" title="还没有配置" hint="新建一套配置即可启用 BYOK；不配置时使用 CLI 自带的鉴权。" />
             ) : (
               <ul className="space-y-0.5">
                 {config.profiles.map((p) => {
@@ -118,9 +157,8 @@ export function ByokView() {
                           <span className="min-w-0 flex-1 truncate font-sans text-[13px] font-medium text-ink">{p.name || "未命名"}</span>
                           {active && <span className="shrink-0 font-sans text-[10px] text-accent">使用中</span>}
                         </div>
-                        <div className="mt-0.5 truncate pl-3 font-mono text-[11px] text-ink-faint">
-                          {p.baseUrl || "默认端点"}
-                        </div>
+                        <div className="mt-0.5 truncate pl-3 font-mono text-[11px] text-ink-faint">{p.baseUrl || "默认端点"}</div>
+                        {p.notes && <div className="mt-0.5 truncate pl-3 font-sans text-[11px] text-ink-faint">{p.notes}</div>}
                       </button>
                     </li>
                   );
@@ -139,7 +177,7 @@ export function ByokView() {
         </div>
 
         <div className="min-w-0 flex-1 overflow-y-auto">
-          <div className="mx-auto w-full max-w-[640px] px-8 py-6">
+          <div className="mx-auto w-full max-w-[760px] px-8 py-6">
             {(error || storeError) && (
               <p className="mb-4 rounded-control border border-line bg-surface px-3 py-2 font-sans text-[12px] text-danger">
                 {error ?? storeError}
@@ -148,16 +186,45 @@ export function ByokView() {
             {!draft ? (
               <EmptyState icon="key" title="选择或新建一套配置" hint="配置会作为环境变量注入每次 claude 启动。" />
             ) : (
-              <div className="space-y-5">
+              <div className="space-y-6">
+                <div className="flex items-start gap-2 rounded-card border border-line bg-canvas px-3.5 py-2.5 font-sans text-[12px] leading-relaxed text-ink-muted">
+                  <Icon name="spark" size={13} className="mt-0.5 shrink-0 text-ink-faint" />
+                  这些值只注入 Loom 启动的 claude 进程，不会改动 <span className="font-mono">~/.claude/settings.json</span>。
+                </div>
+
                 <section className="space-y-3">
-                  <h3 className="font-sans text-[12px] font-medium tracking-wide text-ink-muted">基本信息</h3>
-                  <Field label="名称">
-                    <TextField value={draft.name} onChange={(e) => edit({ name: e.target.value })} placeholder="例如：公司代理" />
+                  <SectionTitle title="基本信息" />
+                  <div className="grid grid-cols-2 gap-3">
+                    <Field label="名称" required>
+                      <TextField value={draft.name} onChange={(e) => edit({ name: e.target.value })} placeholder="例如：DeepSeek" />
+                    </Field>
+                    <Field label="备注">
+                      <TextField value={draft.notes} onChange={(e) => edit({ notes: e.target.value })} placeholder="例如：公司专用账号" />
+                    </Field>
+                  </div>
+                  <Field label="官网链接" hint="用于“获取 API Key”跳转，可留空。">
+                    <TextField value={draft.website} onChange={(e) => edit({ website: e.target.value })} placeholder="https://platform.example.com" />
                   </Field>
-                  <Field label="Base URL" hint="对应 ANTHROPIC_BASE_URL；留空则使用默认端点。">
-                    <TextField value={draft.baseUrl} onChange={(e) => edit({ baseUrl: e.target.value })} placeholder="https://api.example.com" />
-                  </Field>
-                  <Field label="API Key" hint="对应 ANTHROPIC_API_KEY；同时会移除 ANTHROPIC_AUTH_TOKEN，避免 CLI 优先使用旧令牌。">
+                </section>
+
+                <section className="space-y-3">
+                  <SectionTitle title="连接" />
+                  <Field
+                    label="API Key"
+                    required
+                    hint={`写入 ${authField}；另一个认证变量会从继承环境中移除。`}
+                    extra={
+                      draft.website.trim() ? (
+                        <button
+                          type="button"
+                          className="inline-flex items-center gap-1 font-sans text-[11.5px] text-accent hover:underline"
+                          onClick={() => void openUrl(draft.website.trim()).catch((e) => setError(errorText(e)))}
+                        >
+                          获取 API Key <Icon name="external" size={11} />
+                        </button>
+                      ) : null
+                    }
+                  >
                     <div className="relative">
                       <TextField
                         className="pr-10 font-mono text-[12px]"
@@ -178,23 +245,97 @@ export function ByokView() {
                       </button>
                     </div>
                   </Field>
+                  <Field label="请求地址" required hint="对应 ANTHROPIC_BASE_URL；中转站通常以 /anthropic 结尾。">
+                    <TextField
+                      className="font-mono text-[12px]"
+                      value={draft.baseUrl}
+                      onChange={(e) => edit({ baseUrl: e.target.value })}
+                      placeholder="https://api.example.com/anthropic"
+                    />
+                  </Field>
                 </section>
 
-                <section className="space-y-3">
-                  <h3 className="font-sans text-[12px] font-medium tracking-wide text-ink-muted">模型映射</h3>
-                  <p className="font-sans text-[11.5px] leading-relaxed text-ink-faint">
-                    把 Claude Code 的 opus / sonnet / haiku 指向你的服务商模型名，分别写入
-                    ANTHROPIC_DEFAULT_OPUS_MODEL / SONNET / HAIKU。留空表示不覆盖。
-                  </p>
-                  {(["opus", "sonnet", "haiku"] as const).map((k) => (
-                    <Field key={k} label={k}>
-                      <TextField
-                        value={draft.models[k]}
-                        onChange={(e) => edit({ models: { ...draft.models, [k]: e.target.value } })}
-                        placeholder={k === "opus" ? "claude-opus-…" : k === "sonnet" ? "claude-sonnet-…" : "claude-haiku-…"}
-                      />
-                    </Field>
-                  ))}
+                <section className="rounded-card border border-line bg-canvas px-4 py-3">
+                  <details className="group">
+                    <summary className="flex cursor-pointer list-none items-center gap-1.5 font-sans text-[12.5px] font-medium text-ink">
+                      <Icon name="chevron" size={12} className="transition-transform group-open:rotate-90" />
+                      高级选项
+                    </summary>
+                    <div className="mt-3 space-y-3">
+                      <Row label="上游格式" hint="Loom 只支持 Anthropic Messages 协议。">
+                        <span className="font-sans text-[12.5px] text-ink-muted">Anthropic Messages（原生）</span>
+                      </Row>
+                      <Row label="完整 URL" hint="请求地址已经是完整接口地址时打开。">
+                        <Switch
+                          checked={draft.fullUrl}
+                          label="请求地址是完整 URL"
+                          onChange={(v) => edit({ fullUrl: v })}
+                        />
+                      </Row>
+                      <Row label="认证字段" hint="多数中转网关使用 ANTHROPIC_AUTH_TOKEN。">
+                        <Select
+                          className="w-64"
+                          value={authField}
+                          onChange={(e) => edit({ authField: e.target.value })}
+                        >
+                          <option value="ANTHROPIC_AUTH_TOKEN">ANTHROPIC_AUTH_TOKEN（默认）</option>
+                          <option value="ANTHROPIC_API_KEY">ANTHROPIC_API_KEY</option>
+                        </Select>
+                      </Row>
+                    </div>
+                  </details>
+                </section>
+
+                <section>
+                  <SectionTitle
+                    title="模型映射"
+                    hint="实际请求模型写入 ANTHROPIC_DEFAULT_*_MODEL / CLAUDE_CODE_SUBAGENT_MODEL；勾选 1M 会追加 [1m]。"
+                  />
+                  <div className="overflow-hidden rounded-card border border-line">
+                    <div className="grid grid-cols-[5.5rem_minmax(0,1fr)_minmax(0,1fr)_2.5rem] gap-2 border-b border-line bg-canvas px-3 py-2 font-sans text-[11px] text-ink-faint">
+                      <span>模型角色</span>
+                      <span>显示名称</span>
+                      <span>实际请求模型</span>
+                      <span className="text-center">1M</span>
+                    </div>
+                    {ROLES.map((role) => {
+                      const model = draft.models[role.key];
+                      const nameKey = `${role.key}Name` as keyof ModelMap;
+                      const millionKey = `${role.key}Million` as keyof ModelMap;
+                      return (
+                        <div
+                          key={role.key}
+                          className="grid grid-cols-[5.5rem_minmax(0,1fr)_minmax(0,1fr)_2.5rem] items-center gap-2 border-b border-line px-3 py-2 last:border-b-0"
+                        >
+                          <span className="font-sans text-[12px] text-ink">{role.label}</span>
+                          {role.hasName ? (
+                            <TextField
+                              className="h-7 rounded-chip px-2 text-[12px]"
+                              value={draft.models[nameKey] as string}
+                              onChange={(e) => editModel({ [nameKey]: e.target.value } as Partial<ModelMap>)}
+                              placeholder={role.key === "fable" ? "Fable" : role.label}
+                            />
+                          ) : (
+                            <span className="font-sans text-[11px] text-ink-faint">{role.hint}</span>
+                          )}
+                          <TextField
+                            className="h-7 rounded-chip px-2 font-mono text-[11.5px]"
+                            value={model}
+                            onChange={(e) => editModel({ [role.key]: e.target.value } as Partial<ModelMap>)}
+                            placeholder={role.placeholder}
+                          />
+                          <label className="flex justify-center" title="声明 1M 上下文">
+                            <input
+                              type="checkbox"
+                              checked={draft.models[millionKey] as boolean}
+                              onChange={(e) => editModel({ [millionKey]: e.target.checked } as Partial<ModelMap>)}
+                              className="size-3.5 accent-accent"
+                            />
+                          </label>
+                        </div>
+                      );
+                    })}
+                  </div>
                 </section>
 
                 <section className="rounded-card border border-line bg-canvas px-3.5 py-3">
@@ -205,11 +346,11 @@ export function ByokView() {
                   {Object.keys(envPreview.env).length === 0 ? (
                     <p className="font-sans text-[11.5px] text-ink-faint">不注入任何环境变量（使用 CLI 自带鉴权）。</p>
                   ) : (
-                    <ul className="space-y-1 font-mono text-[11.5px] text-ink">
+                    <ul className="space-y-1 font-mono text-[11.5px]">
                       {Object.entries(envPreview.env).map(([k, v]) => (
                         <li key={k} className="flex gap-2">
                           <span className="shrink-0 text-ink-muted">{k}</span>
-                          <span className="truncate text-ink">{k === "ANTHROPIC_API_KEY" ? "••••••••" : v}</span>
+                          <span className="truncate text-ink">{AUTH_FIELDS.includes(k as (typeof AUTH_FIELDS)[number]) ? "••••••••" : v}</span>
                         </li>
                       ))}
                     </ul>
@@ -273,12 +414,45 @@ export function ByokView() {
   );
 }
 
-function Field({ label, hint, children }: { label: string; hint?: string; children: React.ReactNode }) {
+function SectionTitle({ title, hint }: { title: string; hint?: string }) {
+  return (
+    <div className="mb-2">
+      <h3 className="font-sans text-[12px] font-medium tracking-wide text-ink-muted">{title}</h3>
+      {hint && <p className="mt-0.5 font-sans text-[11px] leading-relaxed text-ink-faint">{hint}</p>}
+    </div>
+  );
+}
+
+function Field({ label, hint, extra, required, children }: {
+  label: string;
+  hint?: string;
+  extra?: ReactNode;
+  required?: boolean;
+  children: ReactNode;
+}) {
   return (
     <label className="block">
-      <div className="mb-1 font-sans text-[12px] text-ink-muted">{label}</div>
+      <div className="mb-1 flex items-center gap-1 font-sans text-[12px] text-ink-muted">
+        <span>
+          {label}
+          {required && <span className="ml-0.5 text-accent">*</span>}
+        </span>
+        {extra && <span className="ml-auto">{extra}</span>}
+      </div>
       {children}
       {hint && <div className="mt-1 font-sans text-[11px] leading-relaxed text-ink-faint">{hint}</div>}
     </label>
+  );
+}
+
+function Row({ label, hint, children }: { label: string; hint?: string; children: ReactNode }) {
+  return (
+    <div className="flex items-center gap-3">
+      <div className="min-w-0">
+        <div className="font-sans text-[12.5px] text-ink">{label}</div>
+        {hint && <div className="font-sans text-[11px] text-ink-faint">{hint}</div>}
+      </div>
+      <div className="ml-auto shrink-0">{children}</div>
+    </div>
   );
 }

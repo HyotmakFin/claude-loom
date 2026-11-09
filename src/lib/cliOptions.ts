@@ -1,24 +1,60 @@
-/** 把 Loom 配置翻译成 CLI 启动参数：BYOK 环境变量、插件目录、权限模式。 */
+/**
+ * 把 Loom 配置翻译成 CLI 启动参数。
+ *
+ * 环境变量命名与 cc-switch 保持一致：
+ *   ANTHROPIC_BASE_URL / ANTHROPIC_AUTH_TOKEN|ANTHROPIC_API_KEY
+ *   ANTHROPIC_MODEL（兜底）、ANTHROPIC_DEFAULT_{OPUS,SONNET,FABLE,HAIKU}_MODEL(_NAME)
+ *   CLAUDE_CODE_SUBAGENT_MODEL
+ * 模型名带 1M 标记时追加 `[1m]`。
+ */
 import type { StartOptions } from "./ipc";
 import type { LoomConfig, Profile } from "./types";
 
-/** Claude Code 支持的环境变量：模型映射走 ANTHROPIC_DEFAULT_*_MODEL。 */
+export const AUTH_FIELDS = ["ANTHROPIC_AUTH_TOKEN", "ANTHROPIC_API_KEY"] as const;
+
+/** 追加 `[1m]`；已带后缀时不重复。 */
+export function effectiveModel(model: string, million: boolean): string {
+  const m = model.trim();
+  if (!m) return "";
+  return million && !/\[1m\]$/i.test(m) ? `${m}[1m]` : m;
+}
+
+/** 角色 → 实际模型 / 显示名称 的环境变量。 */
+export const MODEL_ENV = [
+  { key: "opus", model: "ANTHROPIC_DEFAULT_OPUS_MODEL", name: "ANTHROPIC_DEFAULT_OPUS_MODEL_NAME", hasName: true },
+  { key: "sonnet", model: "ANTHROPIC_DEFAULT_SONNET_MODEL", name: "ANTHROPIC_DEFAULT_SONNET_MODEL_NAME", hasName: true },
+  { key: "fable", model: "ANTHROPIC_DEFAULT_FABLE_MODEL", name: "ANTHROPIC_DEFAULT_FABLE_MODEL_NAME", hasName: true },
+  { key: "haiku", model: "ANTHROPIC_DEFAULT_HAIKU_MODEL", name: "ANTHROPIC_DEFAULT_HAIKU_MODEL_NAME", hasName: true },
+  { key: "subagent", model: "CLAUDE_CODE_SUBAGENT_MODEL", name: "", hasName: false },
+  { key: "fallback", model: "ANTHROPIC_MODEL", name: "", hasName: false },
+] as const;
+
+export type ModelRoleKey = (typeof MODEL_ENV)[number]["key"];
+
+/** 当前配置将被注入的环境变量（key 已脱敏由调用方处理）。 */
 export function profileEnv(p: Profile | undefined): { env: Record<string, string>; envRemove: string[] } {
   const env: Record<string, string> = {};
   const envRemove: string[] = [];
   if (!p) return { env, envRemove };
+
   const baseUrl = p.baseUrl.trim();
   const key = p.apiKey.trim();
   if (baseUrl) env.ANTHROPIC_BASE_URL = baseUrl;
   if (key) {
-    env.ANTHROPIC_API_KEY = key;
-    // 同时存在 AUTH_TOKEN 时 CLI 会优先用它，导致 BYOK 不生效
-    envRemove.push("ANTHROPIC_AUTH_TOKEN");
+    const field = p.authField === "ANTHROPIC_API_KEY" ? "ANTHROPIC_API_KEY" : "ANTHROPIC_AUTH_TOKEN";
+    env[field] = key;
+    // 两者同时存在时 CLI 的行为不确定，主动移除另一个
+    envRemove.push(field === "ANTHROPIC_API_KEY" ? "ANTHROPIC_AUTH_TOKEN" : "ANTHROPIC_API_KEY");
   }
-  const map = { opus: "ANTHROPIC_DEFAULT_OPUS_MODEL", sonnet: "ANTHROPIC_DEFAULT_SONNET_MODEL", haiku: "ANTHROPIC_DEFAULT_HAIKU_MODEL" } as const;
-  for (const [k, name] of Object.entries(map) as [keyof typeof map, string][]) {
-    const v = p.models[k].trim();
-    if (v) env[name] = v;
+
+  for (const role of MODEL_ENV) {
+    const cfg = p.models[role.key];
+    const value = effectiveModel(cfg, p.models[`${role.key}Million` as keyof Profile["models"]] as boolean);
+    if (value) env[role.model] = value;
+    if (role.hasName) {
+      const display = p.models[`${role.key}Name` as keyof Profile["models"]] as string;
+      if (display?.trim()) env[role.name] = display.trim();
+    }
   }
   return { env, envRemove };
 }

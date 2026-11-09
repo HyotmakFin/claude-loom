@@ -3,7 +3,7 @@
 发布页提供构建好的 `.pkg.tar.zst`，直接安装：
 
 ```bash
-sudo pacman -U claude-loom-0.1.0-1-x86_64.pkg.tar.zst
+sudo pacman -U claude-loom-0.2.0-1-x86_64.pkg.tar.zst
 ```
 
 安装后从应用菜单启动 Loom，或执行 `loom`。
