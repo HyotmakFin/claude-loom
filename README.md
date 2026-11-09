@@ -50,6 +50,9 @@ Windows / macOS 安装包由 GitHub Actions 在原生 runner 上构建（macOS �
 sudo pacman -U claude-loom-<版本>-1-x86_64.pkg.tar.zst
 ```
 
+**其他 Linux 发行版**：下载 `Loom_*.AppImage`，`chmod +x` 后直接运行
+（无 FUSE 时加 `--appimage-extract-and-run`）。
+
 **Windows**：运行 `.msi` 或 `-setup.exe`（未签名，SmartScreen 可能提示）。
 
 **macOS**：打开 `.dmg` 拖入 Applications；未签名，首次启动需右键 → 打开，
