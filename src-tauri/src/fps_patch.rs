@@ -24,6 +24,9 @@ pub fn maybe_reexec() {
         }
         candidates.push(PathBuf::from("/usr/lib/loom/libloom-vblank.so"));
         if let Some(appdir) = env::var_os("APPDIR").map(PathBuf::from) {
+            // Tauri 使用 productName 作为资源目录名
+            candidates.push(appdir.join("usr/lib/Loom/libloom-vblank.so"));
+            candidates.push(appdir.join("usr/lib/claude-loom/libloom-vblank.so"));
             candidates.push(appdir.join("usr/lib/loom/libloom-vblank.so"));
         }
         candidates.into_iter().find(|p| p.is_file())
