@@ -24,7 +24,8 @@ Loom 只是一层薄壳：不负责安装 CLI，也不处理网络或模型适�
 - **新会话**：会话列表顶部的「新会话」，选择目录后直接开始，无需已有历史。
 - **预览**：与对话并排、可折叠；Markdown、图片、代码高亮（Shiki），
   localhost 网页内嵌，其余一律可在系统浏览器打开。
-- **深色模式**：侧栏顶部一键切换，画布 `#1F1F1E`，代码高亮同步使用深色主题；选择会记住。
+- **深色模式**：跟随系统 / 浅色 / 深色三态切换，画布 `#1F1F1E`，代码高亮同步使用深色主题；
+  选择会记住，系统切换时自动跟随。
 - **权限**：CLI 的工具权限请求会变成确认卡片（允许 / 始终允许 / 拒绝 / 拒绝并中止），
   状态机为 idle → streaming → awaiting-permission → streaming → done。
 
@@ -38,15 +39,23 @@ Loom 只是一层薄壳：不负责安装 CLI，也不处理网络或模型适�
 
 API Key 以明文保存在 Loom 的配置文件中（Unix 下权限 0600），不要在共享机器上使用。
 
-## 安装（Arch Linux）
+## 安装
 
-从 [Releases](https://github.com/HyotMakFin/claude-loom/releases/latest) 下载 `.pkg.tar.zst`：
+从 [Releases](https://github.com/HyotMakFin/claude-loom/releases/latest) 下载对应平台安装包。
+Windows / macOS 安装包由 GitHub Actions 在原生 runner 上构建（macOS 为 universal 通用二进制）。
+
+**Arch Linux**
 
 ```bash
-sudo pacman -U claude-loom-0.3.0-1-x86_64.pkg.tar.zst
+sudo pacman -U claude-loom-<版本>-1-x86_64.pkg.tar.zst
 ```
 
-自行构建见 [packaging/README.md](packaging/README.md)。其他平台用 `npm run tauri build` 生成安装包。
+**Windows**：运行 `.msi` 或 `-setup.exe`（未签名，SmartScreen 可能提示）。
+
+**macOS**：打开 `.dmg` 拖入 Applications；未签名，首次启动需右键 → 打开，
+或 `xattr -dr com.apple.quarantine /Applications/Loom.app`。
+
+Linux 包自行构建见 [packaging/README.md](packaging/README.md)。
 
 ## 品牌
 

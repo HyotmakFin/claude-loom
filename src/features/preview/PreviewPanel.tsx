@@ -119,7 +119,7 @@ function FileMode({ path, setPath, file, error, loading, onLoad, onPick }: {
 
 function FileBody({ file }: { file: FilePreview }) {
   const ext = file.name.split(".").pop()?.toLowerCase() ?? "";
-  const theme = useTheme((s) => s.theme);
+  const theme = useTheme((s) => s.resolved);
   const [codeHtml, setCodeHtml] = useState("");
 
   useEffect(() => {

@@ -9,7 +9,7 @@ const CACHE_LIMIT = 200;
 /** 异步渲染 Markdown；渲染完成前展示转义后的纯文本，避免闪白。 */
 export function useMarkdown(source: string | null | undefined): string {
   const text = source ?? "";
-  const theme = useTheme((s) => s.theme);
+  const theme = useTheme((s) => s.resolved);
   const key = `${theme}\u0000${text}`;
   const [html, setHtml] = useState(() => cache.get(key) ?? "");
 

@@ -7,8 +7,8 @@ import type { ReactNode } from "react";
 import markDarkUrl from "@/assets/brand/loom-mark-dark.svg";
 import markLightUrl from "@/assets/brand/loom-mark.svg";
 import { Icon, type IconName } from "@/components/ui/Icon";
-import { Button } from "@/components/ui/Button";
 import { useTheme } from "@/stores/theme";
+import { ThemeMenu } from "./ThemeMenu";
 
 export type Route = "sessions" | "byok" | "skills" | "plugins" | "debug";
 
@@ -43,23 +43,14 @@ function Logo({ dark }: { dark: boolean }) {
 }
 
 export function AppShell({ route, onRoute, footer, children }: Props) {
-  const theme = useTheme((s) => s.theme);
-  const toggleTheme = useTheme((s) => s.toggle);
+  const theme = useTheme((s) => s.resolved);
   return (
     <div className="flex h-full gap-2 bg-canvas p-2 pl-0">
       <aside className="flex w-56 shrink-0 flex-col pl-3">
         <div className="flex h-12 items-center gap-2 px-1.5">
           <Logo dark={theme === "dark"} />
           <span className="font-serif text-[17px] font-semibold tracking-[-0.01em] text-ink">Loom</span>
-          <Button
-            variant="ghost"
-            size="sm"
-            icon={theme === "dark" ? "sun" : "moon"}
-            aria-label={theme === "dark" ? "切换到浅色模式" : "切换到深色模式"}
-            title={theme === "dark" ? "浅色模式" : "深色模式"}
-            className="ml-auto"
-            onClick={toggleTheme}
-          />
+          <ThemeMenu />
         </div>
 
         <nav className="mt-2 flex flex-col gap-5">
