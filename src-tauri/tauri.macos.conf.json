@@ -1,9 +1,0 @@
-{
-  "bundle": {
-    "targets": ["app", "dmg"],
-    "macOS": {
-      "minimumSystemVersion": "11.0",
-      "dmg": { "windowSize": { "width": 600, "height": 380 } }
-    }
-  }
-}

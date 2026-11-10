@@ -138,7 +138,7 @@ def main():
         render(OUT / "loom-icon.svg", OUT / "loom-icon.png", 1024)
         for size in (32, 128, 256):
             render(OUT / "loom-icon.svg", OUT / f"loom-icon-{size}.png", size)
-        print("ok → assets/brand/（应用图标：npx tauri icon assets/brand/loom-icon.png -o src-tauri/icons）")
+        print("ok → assets/brand/（Electron 应用图标：electron/icon.png）")
     else:
         print("未找到 rsvg-convert，跳过 PNG 导出", file=sys.stderr)
 

@@ -1,6 +1,6 @@
 /**
  * Skill 管理：列表 + 启停 + frontmatter 表单 + Markdown 编辑器（带预览）。
- * 启停通过重命名 SKILL.md 实现，见 src-tauri/src/skills/mod.rs。
+ * 启停通过重命名 SKILL.md 实现，见 sidecar/backend/src/skills/mod.rs。
  */
 import { useEffect, useState } from "react";
 

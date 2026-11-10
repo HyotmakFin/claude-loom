@@ -18,7 +18,7 @@ Wayland surface commit 仍然精确是 60fps。
 
 - 渲染：Electron 45 / Chromium（Wayland 原生，`requestAnimationFrame` 跟随显示器刷新率）
 - 前端：React 代码原样复用，只把 Tauri API 替换成 `window.loom` 桥
-- 后端：Rust sidecar 复用原 `src-tauri/src` 下的会话、配置、Skill、插件、CLI、预览逻辑，
+- 后端：Rust sidecar 复用 `sidecar/backend/src` 下的会话、配置、Skill、插件、CLI、预览逻辑，
   24 个 Rust 单测和 17 个前端单测继续运行
 
 ## 架构
@@ -36,8 +36,7 @@ Wayland surface commit 仍然精确是 60fps。
                                    └─ 事件：{"event":"loom://cli","payload":...}
 ```
 
-`src-tauri/src` 仍保留：sidecar 通过 `#[path]` 直接包含这些模块；原来的 Tauri 外壳作为遗留代码保留，
-不再是发布产物。
+sidecar 通过 `#[path]` 直接包含 `sidecar/backend/src` 的模块；项目里不再保留 Tauri 外壳。
 
 ## 功能
 
@@ -103,7 +102,7 @@ npm run electron              # 启动 Electron（加载 dist/）
 | --- | --- |
 | `npm test` | 前端单测 |
 | `npm run typecheck` | TypeScript 检查 |
-| `(cd sidecar && cargo test)` | Rust 后端单测（复用原 src-tauri 逻辑） |
+| `(cd sidecar && cargo test)` | Rust 后端单测 |
 
 调试时可设置 `LOOM_DEBUG=1` 看渲染进程 console，`LOOM_BACKEND=/path/to/loom-backend` 指定 sidecar。
 

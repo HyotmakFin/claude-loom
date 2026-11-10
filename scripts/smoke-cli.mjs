@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// 不依赖 Tauri 的协议冒烟测试：以与 src-tauri/src/cli/process.rs 相同的参数 spawn claude，
+// 不依赖 Tauri 的协议冒烟测试：以与 sidecar/backend/src/cli/process.rs 相同的参数 spawn claude，
 // 发送一条会触发 Bash 权限请求的消息，自动 allow，打印状态迁移，直到 result。
 // 用法：node scripts/smoke-cli.mjs [cwd]
 import { spawn } from "node:child_process";

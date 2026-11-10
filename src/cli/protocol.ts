@@ -127,7 +127,7 @@ export function isCanUseTool(m: CliMessage): m is ControlRequest & { request: Ca
   return m.type === "control_request" && (m as ControlRequest).request?.subtype === "can_use_tool";
 }
 
-// ── Rust → 前端事件（src-tauri/src/cli/process.rs 的 CliEvent）──────────
+// ── Rust → 前端事件（sidecar/backend/src/cli/process.rs 的 CliEvent）──────────
 
 export const CLI_EVENT = "loom://cli";
 

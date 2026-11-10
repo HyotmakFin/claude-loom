@@ -1,4 +1,4 @@
-/** 与 Rust 侧 serde 输出一一对应的类型（src-tauri/src/**）。 */
+/** 与 Rust 侧 serde 输出一一对应的类型（sidecar/backend/src/**）。 */
 
 export interface AppInfo {
   claudeDir: string;

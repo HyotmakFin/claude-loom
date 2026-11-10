@@ -4,8 +4,6 @@ import react from "@vitejs/plugin-react";
 import tailwindcss from "@tailwindcss/vite";
 import { fileURLToPath, URL } from "node:url";
 
-const host = process.env.TAURI_DEV_HOST;
-
 export default defineConfig({
   base: "./",
   plugins: [react(), tailwindcss()],
@@ -14,16 +12,14 @@ export default defineConfig({
   server: {
     port: 1420,
     strictPort: true,
-    host: host || false,
-    hmr: host ? { protocol: "ws", host, port: 1421 } : undefined,
-    watch: { ignored: ["**/src-tauri/**"] },
+    host: false,
   },
-  envPrefix: ["VITE_", "TAURI_ENV_"],
+  envPrefix: ["VITE_"],
   build: {
     // WebKitGTK / WKWebView 基线
-    target: process.env.TAURI_ENV_PLATFORM === "windows" ? "chrome105" : "safari15",
-    minify: !process.env.TAURI_ENV_DEBUG ? "esbuild" : false,
-    sourcemap: !!process.env.TAURI_ENV_DEBUG,
+    target: "chrome130",
+    minify: !process.env.LOOM_DEBUG,
+    sourcemap: !!process.env.LOOM_DEBUG,
   },
   test: { environment: "node", include: ["src/**/*.test.ts"] },
 });

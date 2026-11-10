@@ -1,173 +1,73 @@
-# Loom 架构
+# 架构
 
-## 目录结构（✅ 已完成 / ⏳ 后续模块）
-
-```
-loom/
-├─ src-tauri/                      Rust：只做进程、文件系统、预览窗口
-│  ├─ tauri.conf.json              公共配置 + CSP（frame-src 仅放行 localhost）
-│  ├─ tauri.{macos,windows,linux}.conf.json   三平台打包目标（自动合并）
-│  └─ src/
-│     ├─ lib.rs                    ✅ Builder、命令注册、退出时清理子进程
-│     ├─ cli/                      ✅ 模块 1
-│     │  ├─ locate.rs              查找 claude(.exe/.cmd)、构造子进程 PATH
-│     │  ├─ ndjson.rs              行切分（\n / \r\n / BOM）
-│     │  ├─ process.rs             spawn、stdout/stderr 读取、stop/kill 进程树
-│     │  └─ commands.rs            cli_locate / cli_start / cli_send / cli_stop
-│     ├─ paths.rs                  ✅ ~/.claude / CLAUDE_CONFIG_DIR / 平台配置目录
-│     ├─ sessions/                 ✅ 扫描 projects/*.jsonl + sessions/*.json，mtime 缓存
-│     ├─ config.rs                 ✅ BYOK 多套配置、插件目录、置顶/归档标记（0600）
-│     ├─ skills/                   ✅ SKILL.md 扫描、frontmatter、启停、编辑、新建
-│     ├─ plugins.rs                ✅ installed_plugins.json + 外部插件目录
-│     ├─ preview.rs                ✅ 本地文件读取（文本/图片，含缓存与截断）
-│     └─ platform.rs               ✅ 平台字体解析（fc-match）
-│
-├─ src/                            React 19 + TS + Tailwind 4 + Zustand
-│  ├─ styles/tokens.css            ✅ 全部颜色/字体/圆角/阴影 token（清空了 Tailwind 默认色板）
-│  ├─ styles/fonts.css             ✅ @font-face（font-display: block）
-│  ├─ cli/protocol.ts              ✅ stream-json 消息类型与 stdin 消息构造
-│  ├─ cli/machine.ts               ✅ 运行状态机（纯函数，有单测）
-│  ├─ stores/runs.ts               ✅ Tauri 事件 → 状态机 → Zustand；所有 stdin 写入集中于此
-│  ├─ lib/ipc.ts                   ✅ invoke 类型化封装
-│  ├─ lib/markdown.ts              ✅ markdown-it（禁用 HTML）+ Shiki（JS 正则引擎）
-│  ├─ lib/chatItems.ts             ✅ 历史 JSONL 与实时 stream-json → 统一渲染模型
-│  ├─ lib/cliOptions.ts            ✅ 配置 → CLI 环境变量 / --plugin-dir
-│  ├─ stores/{config,sessions,skills,plugins,runs}.ts  ✅ Zustand
-│  ├─ components/ui/               ✅ Button / TextField / Switch / Markdown …（手写）
-│  ├─ components/PermissionPrompt  ✅ 权限确认卡片
-│  └─ features/
-│     ├─ shell/                    ✅ 外框与导航
-│     ├─ debug/                    ✅ CLI 调试面板
-│     ├─ sessions/                 ✅ 列表、搜索、置顶/归档/删除
-│     ├─ chat/                     ✅ 对话视图、流式渲染、乐观回显、权限卡片
-│     ├─ byok/                     ✅ 多套配置编辑
-│     ├─ skills/  plugins/         ✅ 启停与编辑 / 目录管理
-│     └─ preview/                  ✅ Shiki、图片、iframe ↔ 系统浏览器降级
-└─ scripts/
-   ├─ build-fonts.py               ✅ 下载并生成字体子集（预算检查）
-   └─ smoke-cli.mjs                ✅ 不经 Tauri 直接验证 CLI 协议
-```
-
-## CLI 通信
+Loom 0.5 起由三个进程/层组成：
 
 ```
-React ──invoke("cli_send", json)──▶ Rust ──json + "\n"──▶ claude stdin
-React ◀──event "loom://cli"─────── Rust ◀──NDJSON 行──── claude stdout
+┌───────────────────────────── Electron ─────────────────────────────┐
+│  renderer (React + Vite)  ←─ preload.cjs（contextBridge）─→ main.cjs│
+│                                                          │ IPC      │
+└──────────────────────────────────────────────────────────┼──────────┘
+                                                           ▼
+                                    loom-backend（Rust，stdio JSON-RPC）
+                                    ├─ 会话 JSONL 扫描 / 分叉 / 删除
+                                    ├─ claude CLI 子进程 + NDJSON 流
+                                    ├─ 配置 / Skill / 插件 / 文件预览
+                                    └─ 事件 → {"event":"loom://cli","payload":...}
 ```
 
-spawn 参数：
+## 目录
 
-```
-claude -p --input-format stream-json --output-format stream-json --verbose \
-       --permission-prompt-tool stdio [--resume <id>] [--model m] [--permission-mode m] [--plugin-dir d]…
-```
-
-`--permission-prompt-tool stdio` 让 CLI 把权限请求以控制消息的形式写到 stdout：
-
-```jsonc
-// CLI → Loom
-{"type":"control_request","request_id":"…","request":{"subtype":"can_use_tool","tool_name":"Bash","input":{…},"permission_suggestions":[…]}}
-// Loom → CLI
-{"type":"control_response","response":{"subtype":"success","request_id":"…","response":{"behavior":"allow","updatedInput":{…}}}}
-{"type":"control_response","response":{"subtype":"success","request_id":"…","response":{"behavior":"deny","message":"…","interrupt":false}}}
-// CLI 也可能撤回请求
-{"type":"control_cancel_request","request_id":"…"}
-```
-
-中断：前端写入 `{"type":"control_request","request_id":"…","request":{"subtype":"interrupt"}}`。
-Loom 不支持的 control_request 子类型由 Rust 直接回复 `subtype:"error"`，防止 CLI 卡住。
-
-## 状态机（src/cli/machine.ts）
-
-| 当前 phase | 信号 | 下一 phase |
-| --- | --- | --- |
-| idle / done | `user_sent` | streaming |
-| streaming | `can_use_tool` | awaiting-permission（入队） |
-| awaiting-permission | `can_use_tool` | awaiting-permission（入队） |
-| awaiting-permission | `permission_decided` / `control_cancel_request` | 队列空 → streaming；否则保持 |
-| streaming / awaiting-permission | `result` | done |
-| 任意 | 进程 `exit` | 中途退出 → done，清空队列，非 0 且非用户停止则记错误 |
-
-`process`（spawning / alive / exited）是与 phase 正交的维度；`canSend = alive && phase ∈ {idle, done}`。
-非法迁移被忽略并打印警告，不抛异常。
-
-## 停止进程
-
-1. 关闭 stdin → CLI 读到 EOF 自行退出；
-2. 3 秒未退出 → 杀进程树：Unix 下子进程放在独立进程组，`killpg(SIGKILL)`；
-   Windows 下 `taskkill /T /F`（`claude.cmd` 经 cmd.exe 启动 node，只杀父进程会留下孤儿）。
-3. 应用退出时同步杀掉所有进程树。
-
-
-## 会话索引
-
-- 历史：`$CLAUDE_CONFIG_DIR/projects/<编码目录>/<sessionId>.jsonl`（未设置时 `~/.claude`）。
-  常用行：`user` / `assistant`（`message.content`）、`ai-title`（`aiTitle`）、`last-prompt`（`lastPrompt`）。
-  其他行（attachment、api-request、file-history-snapshot…）忽略；`isSidechain: true` 的子代理内容不进入主对话。
-- 运行中：`sessions/*.json`（pid、status、name、cwd、updatedAt），按 sessionId 合并到列表。
-- 解析结果按 (mtime, size) 缓存；工具输出截断到 20k 字符。搜索先匹配标题/最近输入，再扫描文件内容（单文件上限 32MB）。
-- 置顶/归档存放在 Loom 配置中，不改动 `~/.claude`；删除会移除对应的 JSONL。
-
-## BYOK
-
-启动前由 `lib/cliOptions.ts` 生成：
-
-| 配置 | 环境变量 |
+| 路径 | 作用 |
 | --- | --- |
-| Base URL | `ANTHROPIC_BASE_URL` |
-| API Key | `ANTHROPIC_API_KEY`（同时从继承环境中移除 `ANTHROPIC_AUTH_TOKEN`） |
-| opus / sonnet / haiku 映射 | `ANTHROPIC_DEFAULT_OPUS_MODEL` / `..._SONNET_MODEL` / `..._HAIKU_MODEL` |
+| `src/` | React 渲染层：会话、聊天、预览、BYOK、Skill、插件、CLI 调试 |
+| `src/lib/electron.ts` | `window.loom` 桥的 TypeScript 封装（invoke / onEvent / 对话框 / 剪贴板） |
+| `electron/main.cjs` | 创建窗口、启动 sidecar、转发 IPC/事件、系统对话框 |
+| `electron/preload.cjs` | `contextBridge` 暴露最小 API；渲染层无 Node 权限 |
+| `sidecar/src/main.rs` | sidecar 入口：stdin JSON-RPC、stdout 响应/事件、命令分发 |
+| `sidecar/backend/src/` | 复用的 Rust 后端：`cli/`、`sessions/`、`config.rs`、`paths.rs`、`plugins.rs`、`skills/`、`preview.rs`、`platform.rs` |
+| `sidecar/tauri-shim/` | 最小 `tauri` 兼容层（`AppHandle` / `State` / `emit` / `async_runtime`），让后端模块无需改代码即可编译进 sidecar |
 
-配置保存在 Tauri 的 app config 目录（Unix 0600），保存采用临时文件 + 原子替换。
+## 协议
 
-## Skill 与插件
+请求（每行一个）：
 
-- Skill 目录 = `~/.claude/skills/<id>/`。启用时入口是 `SKILL.md`，禁用时重命名为 `SKILL.md.disabled`，
-  不需要改 CLI 配置。
-- frontmatter 只解析顶层 `key: value`、引号与 `|` / `>` 块；其余内容原样作为正文。
-- 插件：已安装列表来自 `~/.claude/plugins/installed_plugins.json`（只读）；
-  Loom 添加的外部目录保存在配置中，启用项以 `--plugin-dir <path>` 传入。
+```json
+{"id":1,"cmd":"session_list","args":{"includeArchived":false}}
+```
 
-## 预览
+响应：
 
-- 文件：Rust 读取并判断类型（Markdown / 文本 / 图片 / 二进制），图片转 data URL 并按 (mtime, size) 缓存，
-  文本截断到 512KB。
-- 网页：CSP 只允许内嵌 localhost；其他地址显示降级提示，始终提供"在系统浏览器打开"（tauri-plugin-opener）。
-- Shiki 使用 JS 正则引擎：Tauri 的 CSP 不允许 WebAssembly 编译，避免额外放行 `wasm-unsafe-eval`。
+```json
+{"id":1,"ok":true,"data":[...]}
+```
 
+CLI 事件由 sidecar 主动写 stdout：
 
-## 界面状态
+```json
+{"event":"loom://cli","payload":{"kind":"message","runId":"...","msg":{...}}}
+```
 
-- **主题**：`src/stores/theme.ts` 写入 `<html data-theme>` 与 localStorage，首帧前应用；
-  深色变量在 `styles/tokens.css` 的 `:root[data-theme="dark"]`，画布 `#1F1F1E`。
-  Shiki 同时加载 `loom-light` / `loom-dark` 两套主题，Markdown 渲染按当前主题选择。
-- **斜杠命令**：CLI spawn 后发送 `{"type":"control_request","request":{"subtype":"initialize"}}`，
-  从 `control_response.response.commands` 取命令列表，存入 `RunSlice.commands`。
-  输入 `/` 时如该会话尚未连接，会静默启动 CLI（不产生模型请求）以获取列表。
-- **新会话**：SessionsView 先用伪 SessionSummary 打开 ChatView，首次发送时不带 `--resume`；
-  拿到 system init 的 sessionId 后刷新列表，正式会话随即出现。
+Electron main 收到后 `webContents.send("loom:event", event, payload)`，preload 转成
+`window.loom.onEvent(name, cb)`，`src/stores/runs.ts` 里的状态机消费。
 
+## 关键流程
 
-## 消息操作与帧率补丁
+- **会话列表/详情**：`session_list` / `session_messages` 扫描 `~/.claude/projects/*/*.jsonl`，
+  读取 `~/.claude/sessions/*.json` 的实时运行记录；Loom 自己的置顶/归档在配置文件中。
+- **发消息**：`cli_start` 以 `claude -p --input-format stream-json --output-format stream-json --verbose`
+  启动子进程；前端把 user 消息/control_response 通过 `cli_send` 写回 stdin；sidecar 逐行解析 stdout，
+  原样转成事件。权限请求（`control_request`）在前端渲染成确认卡片。
+- **配置/密钥**：`~/.config/dev.loom.app/config.json`（macOS Application Support、Windows AppData），
+  Unix 权限 0600。API Key 明文保存，切勿共享机器。
+- **预览**：`preview_file` 读取文件并生成 data URL；localhost 用 iframe 内嵌，其他地址交给
+  Electron `shell.openExternal`。
+- **删除/分叉**：直接操作 JSONL；删除按整轮移除并备份到配置目录的 `session-backups/`。
 
-- 分叉：`session_fork(sessionId, uptoUuid)` 把 JSONL 截到该助手回复所在整轮结束，
-  生成新 UUID 并改写每行的 `sessionId`，写入同项目的 `<newId>.jsonl`，标题为「分叉 · 原标题」。
-- 删除：`session_delete_message(sessionId, uuid)` 按整轮删除（用户消息含随后回复；
-  助手消息含同轮工具调用/结果），重接 `parentUuid`，原文件备份到
-  `session-backups/`。正在其他终端运行的会话禁用删除。
-- 复制：Tauri clipboard-manager 插件；代码块复制按钮由 Markdown 渲染时注入，事件委托处理。
-- 帧率：WebKitGTK 的 VBlankMonitor 线程 60Hz。`scripts/fps-patch/vblank_patch.c`
-  通过 `LD_PRELOAD` 只缩短该线程的 `nanosleep`；Rust 在 GTK 初始化前 re-exec 注入，
-  库位于 `/usr/lib/loom/libloom-vblank.so`（AppImage 中由 resources 提供）。
+## 为什么不是 Tauri
 
-## 0.5 起：Electron + Rust sidecar
+Linux 的 Tauri 使用 WebKitGTK。WebKitGTK 2.54 在 Wayland 下把上屏帧率限制在 60fps
+（`PreferPageRenderingUpdatesNear60FPS` 默认开启、VBlank 监视器固定 60Hz、渲染间隔 15ms）。
+逐层补丁后 Wayland surface commit 仍精确为 60fps。Electron/Chromium 在同一台机器上稳定
+200fps，所以 0.5 起渲染层换成 Electron。
 
-Linux 上 Tauri 的 WebKitGTK 把上屏帧率限制在 60fps（max 见 `docs` 与 README）。
-0.5 起渲染层改为 Electron/Chromium：
-
-- `electron/main.cjs`：窗口、IPC、启动 sidecar、转发 CLI 事件
-- `electron/preload.cjs`：`window.loom`（invoke/onEvent/对话框/剪贴板）
-- `sidecar/src/main.rs`：stdio JSON-RPC；通过 `#[path]` 复用 `src-tauri/src` 的后端模块
-- `sidecar/tauri-shim`：最小 `tauri` 兼容层（AppHandle/State/emit/async_runtime）
-
-原 Tauri 外壳保留为遗留代码，不再是发布产物。
+`sidecar/tauri-shim` 只是为了复用后端模块的 API 形状，与 Tauri 运行时无关。

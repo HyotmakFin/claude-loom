@@ -2,21 +2,21 @@
 //! Requests:  {"id": 1, "cmd": "session_list", "args": {...}}
 //! Responses: {"id": 1, "ok": true, "data": ...}
 //! Events:    {"event": "loom://cli", "payload": {...}}
-#[path = "../../src-tauri/src/config.rs"]
+#[path = "../backend/src/config.rs"]
 mod config;
-#[path = "../../src-tauri/src/paths.rs"]
+#[path = "../backend/src/paths.rs"]
 mod paths;
-#[path = "../../src-tauri/src/platform.rs"]
+#[path = "../backend/src/platform.rs"]
 mod platform;
-#[path = "../../src-tauri/src/preview.rs"]
+#[path = "../backend/src/preview.rs"]
 mod preview;
-#[path = "../../src-tauri/src/plugins.rs"]
+#[path = "../backend/src/plugins.rs"]
 mod plugins;
-#[path = "../../src-tauri/src/sessions/mod.rs"]
+#[path = "../backend/src/sessions/mod.rs"]
 mod sessions;
-#[path = "../../src-tauri/src/skills/mod.rs"]
+#[path = "../backend/src/skills/mod.rs"]
 mod skills;
-#[path = "../../src-tauri/src/cli/mod.rs"]
+#[path = "../backend/src/cli/mod.rs"]
 mod cli;
 
 use std::{

@@ -1,6 +1,6 @@
 /**
  * 平台识别与字体栈修正，需在首帧渲染前调用。
- * 原因见 src-tauri/src/platform.rs：WebKitGTK 不解析 CSS 通用字体族。
+ * 原因见 sidecar/backend/src/platform.rs：WebKitGTK 不解析 CSS 通用字体族。
  */
 import { ipc } from "./ipc";
 
