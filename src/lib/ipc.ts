@@ -36,6 +36,7 @@ export const ipc = {
   cliStop: (runId: string) => invoke<void>("cli_stop", { runId }),
   cliStopAll: () => invoke<void>("cli_stop_all"),
   settingsStamp: () => invoke<string>("settings_stamp"),
+  currentModel: () => invoke<string | null>("current_model"),
 
   // 环境
   appInfo: () => invoke<AppInfo>("app_info"),

@@ -41,6 +41,13 @@ describe("hud helpers", () => {
     expect(tagged.window).toBe(1_000_000);
   });
 
+  it("uses the current provider model for the context window", () => {
+    const messages = [assistant("deepseek-flash", { inputTokens: 1_000, cacheReadInputTokens: 99_000 })];
+    const ctx = contextOf(undefined, messages, "claude-opus-5-5")!;
+    expect(ctx.window).toBe(200_000);
+    expect(ctx.percent).toBe(50);
+  });
+
   it("formats labels and tokens", () => {
     expect(modelLabel("claude-sonnet-5-5")).toBe("Sonnet 5.5");
     expect(modelLabel("deepseek-flash")).toBe("deepseek-flash");

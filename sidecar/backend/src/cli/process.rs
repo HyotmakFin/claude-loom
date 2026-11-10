@@ -30,6 +30,9 @@ const GRACE: Duration = Duration::from_millis(120);
 pub struct StartOptions {
     pub cwd: PathBuf,
     pub resume: Option<String>,
+    /// 当前 settings 里的模型；显式覆盖 resume 沿用的会话模型
+    #[serde(default)]
+    pub model: Option<String>,
     pub permission_mode: Option<String>,
     #[serde(default)]
     pub plugin_dirs: Vec<PathBuf>,
@@ -106,6 +109,9 @@ impl CliRegistry {
         }
         if let Some(id) = &opts.resume {
             cmd.arg("--resume").arg(id);
+        }
+        if let Some(model) = &opts.model {
+            cmd.arg("--model").arg(model);
         }
         if let Some(m) = &opts.permission_mode {
             cmd.arg("--permission-mode").arg(m);

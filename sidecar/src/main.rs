@@ -86,10 +86,13 @@ async fn dispatch(
             json(cli::commands::cli_locate(cli_path).await?)
         }
         "cli_start" => {
-            let options: cli::StartOptions = serde_json::from_value(
+            let mut options: cli::StartOptions = serde_json::from_value(
                 args.get("options").cloned().ok_or("missing argument: options")?,
             )
             .map_err(|e| format!("invalid options: {e}"))?;
+            if options.model.is_none() {
+                options.model = paths::claude_settings_model();
+            }
             json(cli::commands::cli_start(app.clone(), state(), options).await?)
         }
         "cli_send" => {
@@ -105,6 +108,7 @@ async fn dispatch(
         // app / platform
         "app_info" => json(paths::app_info(app.clone())?),
         "settings_stamp" => json(paths::claude_settings_stamp()),
+        "current_model" => json(paths::claude_settings_model()),
         "cli_stop_all" => {
             registry.shutdown();
             json(serde_json::Value::Null)

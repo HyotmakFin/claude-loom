@@ -65,6 +65,32 @@ pub fn claude_settings_stamp() -> String {
     format!("{:x}", h.finish())
 }
 
+/// 当前 Claude settings 里用于新请求的模型。
+/// resume 会沿用会话里上一次的模型；切换 provider 时必须用 --model 覆盖。
+pub fn claude_settings_model() -> Option<String> {
+    let path = claude_dir().ok()?.join("settings.json");
+    let text = std::fs::read_to_string(path).ok()?;
+    let v: serde_json::Value = serde_json::from_str(&text).ok()?;
+    let get = |k: &str| {
+        v.get("env")
+            .and_then(|e| e.get(k))
+            .and_then(serde_json::Value::as_str)
+            .map(str::trim)
+            .filter(|s| !s.is_empty())
+            .map(str::to_string)
+    };
+    get("ANTHROPIC_MODEL")
+        .or_else(|| get("ANTHROPIC_DEFAULT_OPUS_MODEL"))
+        .or_else(|| get("ANTHROPIC_DEFAULT_SONNET_MODEL"))
+        .or_else(|| {
+            v.get("model")
+                .and_then(serde_json::Value::as_str)
+                .map(str::trim)
+                .filter(|s| !s.is_empty())
+                .map(str::to_string)
+        })
+}
+
 pub fn ensure_dir(p: &std::path::Path) -> Result<(), String> {
     std::fs::create_dir_all(p).map_err(|e| format!("无法创建目录 {}：{e}", p.display()))
 }

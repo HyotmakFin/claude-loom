@@ -70,6 +70,10 @@ export function ChatView({
   const stick = useRef(true);
   const [git, setGit] = useState<GitInfo | null>(null);
   const [modeNonce, setModeNonce] = useState(0);
+  const [provider, setProvider] = useState<{ stamp: string | null; model: string | null }>({
+    stamp: null,
+    model: null,
+  });
 
   const run = useRuns((s) => (runId ? s.runs[runId] : undefined));
   const phase = run?.state.phase ?? "idle";
@@ -127,8 +131,38 @@ export function ChatView({
     };
   }, [cwd, run?.state.phase]);
 
-  const hudModel = useMemo(() => modelOf(run, detail?.messages), [run, detail]);
-  const hudContext = useMemo(() => contextOf(run, detail?.messages), [run, detail]);
+  // cc-switch 可能在别处改了 settings；回到窗口/切换会话/刷新页面时重新读取
+  useEffect(() => {
+    let alive = true;
+    const load = () => {
+      Promise.all([
+        ipc.settingsStamp().catch(() => null),
+        ipc.currentModel().catch(() => null),
+      ]).then(([stamp, model]) => {
+        if (alive) setProvider({ stamp, model });
+      });
+    };
+    load();
+    window.addEventListener("focus", load);
+    return () => {
+      alive = false;
+      window.removeEventListener("focus", load);
+    };
+  }, [session.id]);
+
+  const hudModel = useMemo(() => {
+    // 运行中的 CLI 只有在 settings 没变时才代表当前 provider
+    const runIsCurrent =
+      !!run &&
+      run.state.process === "alive" &&
+      (!provider.stamp || !run.settingsStamp || provider.stamp === run.settingsStamp);
+    const live = runIsCurrent ? modelOf(run) : null;
+    return live ?? provider.model ?? modelOf(undefined, detail?.messages);
+  }, [run, provider, detail]);
+  const hudContext = useMemo(
+    () => contextOf(run, detail?.messages, hudModel),
+    [run, detail, hudModel],
+  );
   const permissionMode = run?.state.permissionMode ?? cfg.permissionMode ?? "default";
   const changeMode = async (mode: string) => {
     if (mode === "bypassPermissions" && !window.confirm("跳过所有权限确认？工具调用将不再询问。")) {

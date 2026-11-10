@@ -96,17 +96,18 @@ export function usageOf(
 
 function inferWindow(model: string | null, used: number): number {
   if (model && /\[1m\]|(^|[^0-9])1m([^0-9]|$)/i.test(model)) return 1_000_000;
-  // 超过 200k 说明只能是更大的窗口；否则按 200k 估
+  // 官方 Claude 默认 200k；非 Claude 模型在 >200k token 时按 1M 估
+  if (model && model.startsWith("claude-")) return 200_000;
   return used > 200_000 ? 1_000_000 : 200_000;
 }
 
-export function contextOf(run?: RunSlice, history?: ChatMessage[]): ContextInfo | null {
+export function contextOf(run?: RunSlice, history?: ChatMessage[], model?: string | null): ContextInfo | null {
   const found = usageOf(run, history);
   if (!found) return null;
   const u = found.usage;
   const used = u.inputTokens + u.cacheReadInputTokens + u.cacheCreationInputTokens;
   if (used <= 0) return null;
-  const window = found.window ?? inferWindow(found.model, used);
+  const window = found.window ?? inferWindow(model ?? found.model, used);
   return { used, window, percent: Math.min(100, (used / window) * 100) };
 }
 
