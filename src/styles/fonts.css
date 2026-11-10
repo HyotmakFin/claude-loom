@@ -17,17 +17,17 @@
   font-display: block;
 }
 
-/* 思源宋体静态子集：GB2312 一级字（3755）+ 中文标点 + 拉丁 */
+/* 思源宋体 CN 全量（不做字符子集），生僻字不再回退到系统字体 */
 @font-face {
   font-family: "Loom Serif SC";
-  src: url("../assets/fonts/SourceHanSerifSC-Regular.subset.woff2") format("woff2");
+  src: url("../assets/fonts/SourceHanSerifSC-Regular.woff2") format("woff2");
   font-weight: 400;
   font-style: normal;
   font-display: block;
 }
 @font-face {
   font-family: "Loom Serif SC";
-  src: url("../assets/fonts/SourceHanSerifSC-SemiBold.subset.woff2") format("woff2");
+  src: url("../assets/fonts/SourceHanSerifSC-SemiBold.woff2") format("woff2");
   font-weight: 600 700;
   font-style: normal;
   font-display: block;
