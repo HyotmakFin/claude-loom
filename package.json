@@ -63,7 +63,9 @@
     "linux": {
       "target": [
         "AppImage",
-        "pacman"
+        "pacman",
+        "deb",
+        "rpm"
       ],
       "category": "Development",
       "icon": "electron/icon.png",
@@ -100,6 +102,12 @@
       "icon": "electron/icon.png",
       "artifactName": "Loom-${version}-${arch}.${ext}",
       "notarize": false
+    },
+    "deb": {
+      "artifactName": "Loom-${version}-${arch}.${ext}"
+    },
+    "rpm": {
+      "artifactName": "Loom-${version}-${arch}.${ext}"
     }
   },
   "license": "MIT"

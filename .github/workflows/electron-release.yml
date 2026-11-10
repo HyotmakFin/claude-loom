@@ -8,7 +8,7 @@ on:
         required: true
         default: "v0.5.0"
       target:
-        description: "win, mac, or both"
+        description: "win, mac, linux, or both"
         required: true
         default: "both"
 
@@ -17,7 +17,7 @@ permissions:
 
 jobs:
   windows:
-    if: ${{ inputs.target != 'mac' }}
+    if: ${{ inputs.target == 'both' || inputs.target == 'win' }}
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@v4
@@ -39,7 +39,7 @@ jobs:
         run: gh release upload "${{ inputs.tag }}" release/*.exe --clobber
 
   macos:
-    if: ${{ inputs.target != 'win' }}
+    if: ${{ inputs.target == 'both' || inputs.target == 'mac' }}
     runs-on: macos-15-intel
     steps:
       - uses: actions/checkout@v4
@@ -70,3 +70,24 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: gh release upload "${{ inputs.tag }}" release/*.dmg --clobber
+
+  linux:
+    if: ${{ inputs.target == 'both' || inputs.target == 'linux' }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - uses: dtolnay/rust-toolchain@stable
+      - run: npm ci
+      - run: cargo build --release --manifest-path sidecar/Cargo.toml
+      - run: npm run build
+      - run: sudo apt-get update && sudo apt-get install -y rpm
+      - run: npx electron-builder --linux rpm --publish never
+      - name: Upload RPM package
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release upload "${{ inputs.tag }}" release/*.rpm --clobber

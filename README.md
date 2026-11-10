@@ -82,7 +82,20 @@ Provider/API Key 由 cc-switch 或 `settings.json` 管理；Loom 不读取也不
 sudo pacman -U claude-loom-0.5.4.pacman
 ```
 
-**其他 Linux**
+**Debian / Ubuntu**
+
+```bash
+sudo apt install ./Loom-0.5.4-amd64.deb
+```
+
+**Fedora / RHEL / openSUSE**
+
+```bash
+sudo dnf install ./Loom-0.5.4-x86_64.rpm
+# openSUSE: sudo zypper install ./Loom-0.5.4-x86_64.rpm
+```
+
+**其他 Linux（AppImage）**
 
 ```bash
 chmod +x Loom-0.5.4.AppImage
