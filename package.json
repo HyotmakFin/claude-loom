@@ -64,6 +64,23 @@
       "category": "Development",
       "icon": "electron/icon.png",
       "maintainer": "Misuzu <HyotMakFin@users.noreply.github.com>"
+    },
+    "pacman": {
+      "depends": [
+        "c-ares",
+        "ffmpeg",
+        "gtk3",
+        "libevent",
+        "libvpx",
+        "libxslt",
+        "libxss",
+        "minizip",
+        "nss",
+        "re2",
+        "snappy",
+        "libnotify"
+      ]
     }
-  }
+  },
+  "license": "MIT"
 }
