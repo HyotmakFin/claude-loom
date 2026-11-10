@@ -43,18 +43,10 @@ sidecar 通过 `#[path]` 直接包含 `sidecar/backend/src` 的模块；项目�
 - **会话**：读取 `~/.claude/projects/*/*.jsonl` 与本机运行记录 `~/.claude/sessions/*.json`，
   列出标题、项目、时间、消息数与运行状态；支持按标题/内容搜索、置顶、归档、删除。
   点击会话查看历史，发送消息时以 `claude --resume <sessionId>` 续聊。
-- **BYOK**：多套配置，按 cc-switch 的约定注入 `ANTHROPIC_BASE_URL`、
-  `ANTHROPIC_AUTH_TOKEN` 或 `ANTHROPIC_API_KEY`，以及
-  `ANTHROPIC_MODEL`、`ANTHROPIC_DEFAULT_{OPUS,SONNET,FABLE,HAIKU}_MODEL(_NAME)`、
-  `CLAUDE_CODE_SUBAGENT_MODEL`；支持显示名与 1M（`[1m]`）标记，Key 默认掩码。
-  启动 CLI 前会把当前 profile 的 env 合并写入 `$CLAUDE_CONFIG_DIR/settings.json`
-  （默认 `~/.claude/settings.json`）的 `env`，保留 hooks/theme/其他键；首次写入前备份为
-  `settings.json.loom-backup`，文件权限 0600。Claude Code 的 settings `env` 优先于进程环境变量，
-  只传子进程 env 不会覆盖已有 settings。
-  模型字段留空会移除对应 env/settings 键，回落到 Claude 官方默认模型；模型映射处可一键拉取
-  上游 `/v1/models`，并在每个模型输入框旁从列表选择。`[1m]` 是 Claude Code 的客户端后缀
-  （请求前去掉），DeepSeek 官方配置为 Sonnet/Opus 带 `[1m]`、Haiku/Subagent 不带，需先开通 1M；
-  Claude 中转站通常留空或直接选择中转站返回的模型名。
+- **Provider / 密钥**：Loom 不内置 BYOK，也不保存 API Key。请使用
+  [cc-switch](https://github.com/farion1231/cc-switch) 或 Claude Code 自己的
+  `$CLAUDE_CONFIG_DIR/settings.json` 配置 provider；Loom 只启动 CLI，不注入
+  `ANTHROPIC_*` 环境变量，也不修改 `settings.json`。
 - **Skill**：扫描 `~/.claude/skills/*/SKILL.md`，启停、编辑 frontmatter 与正文、新建 Skill。
 - **插件**：列出已安装插件；添加外部插件目录并通过 `--plugin-dir` 传给 CLI。
 - **斜杠命令**：输入 `/` 实时预览当前目录可用的命令 / Skill，↑↓ 选择，Enter 或 Tab 填入。
@@ -75,37 +67,37 @@ sidecar 通过 `#[path]` 直接包含 `sidecar/backend/src` 的模块；项目�
 | 内容 | 位置 |
 | --- | --- |
 | Claude Code 数据 | `$CLAUDE_CONFIG_DIR`，未设置时为 `~/.claude` |
-| Loom 配置（含 API Key） | Electron `appData/dev.loom.app`：Linux `~/.config/dev.loom.app`、macOS `~/Library/Application Support/dev.loom.app`、Windows `%APPDATA%\dev.loom.app` |
+| Loom 配置（插件目录、会话标记、CLI 路径/权限模式） | Electron `appData/dev.loom.app`：Linux `~/.config/dev.loom.app`、macOS `~/Library/Application Support/dev.loom.app`、Windows `%APPDATA%\dev.loom.app` |
 | claude 可执行文件 | PATH；可在界面配置里指定 |
 
-API Key 以明文保存在 Loom 的配置文件中（Unix 下权限 0600），不要在共享机器上使用。
+Provider/API Key 由 cc-switch 或 `settings.json` 管理；Loom 不读取也不写入。
 
 ## 安装
 
-从 [Releases](https://github.com/HyotMakFin/claude-loom/releases) 下载 0.5.3 的 Linux 包：
+从 [Releases](https://github.com/HyotMakFin/claude-loom/releases) 下载 0.5.4 的 Linux 包：
 
 **Arch Linux**
 
 ```bash
-sudo pacman -U claude-loom-0.5.3.pacman
+sudo pacman -U claude-loom-0.5.4.pacman
 ```
 
 **其他 Linux**
 
 ```bash
-chmod +x Loom-0.5.3.AppImage
-./Loom-0.5.3.AppImage
+chmod +x Loom-0.5.4.AppImage
+./Loom-0.5.4.AppImage
 ```
 
-无 FUSE 时：`./Loom-0.5.3.AppImage --appimage-extract-and-run`。
+无 FUSE 时：`./Loom-0.5.4.AppImage --appimage-extract-and-run`。
 
 **Windows**
 
-运行 `Loom-0.5.3-Setup.exe`。未签名，SmartScreen 提示时选择「更多信息 → 仍要运行」。
+运行 `Loom-0.5.4-Setup.exe`。未签名，SmartScreen 提示时选择「更多信息 → 仍要运行」。
 
 **macOS**
 
-打开 `Loom-0.5.3-universal.dmg`，把 Loom 拖进 Applications；未签名，首次启动右键 → 打开，
+打开 `Loom-0.5.4-universal.dmg`，把 Loom 拖进 Applications；未签名，首次启动右键 → 打开，
 或 `xattr -dr com.apple.quarantine /Applications/Loom.app`。
 
 ## 开发
@@ -141,7 +133,7 @@ npx electron-builder --mac --universal  # macOS 通用 DMG（需 macOS）
 ## 帧率验收
 
 ```bash
-LOOM_FPS_OVERLAY=1 ./release/Loom-0.5.3.AppImage
+LOOM_FPS_OVERLAY=1 ./release/Loom-0.5.4.AppImage
 ```
 
 右下角会显示当前 rAF 帧率。在 200Hz 显示器上实测稳定 **200.0 fps**。

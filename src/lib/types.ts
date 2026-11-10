@@ -9,38 +9,6 @@ export interface AppInfo {
   pluginsDir: string;
 }
 
-export interface ModelMap {
-  opus: string;
-  sonnet: string;
-  haiku: string;
-  fable: string;
-  subagent: string;
-  fallback: string;
-  opusName: string;
-  sonnetName: string;
-  haikuName: string;
-  fableName: string;
-  opusMillion: boolean;
-  sonnetMillion: boolean;
-  haikuMillion: boolean;
-  fableMillion: boolean;
-  subagentMillion: boolean;
-  fallbackMillion: boolean;
-}
-
-export interface Profile {
-  id: string;
-  name: string;
-  notes: string;
-  website: string;
-  baseUrl: string;
-  apiKey: string;
-  /** ANTHROPIC_AUTH_TOKEN（默认）或 ANTHROPIC_API_KEY */
-  authField: string;
-  fullUrl: boolean;
-  models: ModelMap;
-}
-
 export interface PluginDirCfg {
   path: string;
   enabled: boolean;
@@ -52,8 +20,6 @@ export interface SessionFlag {
 }
 
 export interface LoomConfig {
-  activeProfileId: string | null;
-  profiles: Profile[];
   pluginDirs: PluginDirCfg[];
   sessionFlags: Record<string, SessionFlag>;
   cliPath: string | null;
@@ -122,11 +88,6 @@ export interface ChatMessage {
 export interface SessionDetail {
   session: SessionSummary;
   messages: ChatMessage[];
-}
-
-export interface ModelList {
-  endpoint: string;
-  models: string[];
 }
 
 export interface SkillInfo {

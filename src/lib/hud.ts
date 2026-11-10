@@ -1,6 +1,6 @@
 /** 从 CLI 事件 / 历史消息里提取 HUD 需要的数据：模型、上下文用量。 */
 import type { AssistantMessage, ResultMessage, SystemInit } from "@/cli/protocol";
-import type { ChatMessage, LoomConfig, TokenUsage } from "./types";
+import type { ChatMessage, TokenUsage } from "./types";
 import type { RunSlice } from "@/stores/runs";
 
 export interface ContextInfo {
@@ -94,31 +94,19 @@ export function usageOf(
   return null;
 }
 
-function inferWindow(model: string | null, used: number, cfg: LoomConfig): number {
+function inferWindow(model: string | null, used: number): number {
   if (model && /\[1m\]|(^|[^0-9])1m([^0-9]|$)/i.test(model)) return 1_000_000;
-  const profile = cfg.profiles.find((p) => p.id === cfg.activeProfileId);
-  if (profile && model) {
-    const roles = ["opus", "sonnet", "fable", "haiku", "subagent", "fallback"] as const;
-    for (const role of roles) {
-      const name = profile.models[role]?.trim();
-      if (!name) continue;
-      if (model.includes(name) || name.includes(model)) {
-        const million = profile.models[`${role}Million` as keyof typeof profile.models] as boolean;
-        return million ? 1_000_000 : 200_000;
-      }
-    }
-  }
   // 超过 200k 说明只能是更大的窗口；否则按 200k 估
   return used > 200_000 ? 1_000_000 : 200_000;
 }
 
-export function contextOf(run?: RunSlice, history?: ChatMessage[], cfg?: LoomConfig): ContextInfo | null {
+export function contextOf(run?: RunSlice, history?: ChatMessage[]): ContextInfo | null {
   const found = usageOf(run, history);
-  if (!found || !cfg) return null;
+  if (!found) return null;
   const u = found.usage;
   const used = u.inputTokens + u.cacheReadInputTokens + u.cacheCreationInputTokens;
   if (used <= 0) return null;
-  const window = found.window ?? inferWindow(found.model, used, cfg);
+  const window = found.window ?? inferWindow(found.model, used);
   return { used, window, percent: Math.min(100, (used / window) * 100) };
 }
 

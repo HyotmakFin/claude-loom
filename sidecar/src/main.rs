@@ -6,10 +6,6 @@
 mod config;
 #[path = "../backend/src/git.rs"]
 mod git;
-#[path = "../backend/src/byok.rs"]
-mod byok;
-#[path = "../backend/src/models.rs"]
-mod models;
 #[path = "../backend/src/paths.rs"]
 mod paths;
 #[path = "../backend/src/platform.rs"]
@@ -94,9 +90,6 @@ async fn dispatch(
                 args.get("options").cloned().ok_or("missing argument: options")?,
             )
             .map_err(|e| format!("invalid options: {e}"))?;
-            // Claude Code 的 settings.json env 优先于进程 env；先合并写入再启动
-            byok::apply(&options.env, &options.env_remove)
-                .map_err(|e| format!("写入 Claude settings.json 失败：{e}"))?;
             json(cli::commands::cli_start(app.clone(), state(), options).await?)
         }
         "cli_send" => {
@@ -194,13 +187,6 @@ async fn dispatch(
             let path = path_arg(&args, "path")?;
             let enabled = args.get("enabled").and_then(Value::as_bool).unwrap_or(false);
             json(plugins::plugin_toggle(app.clone(), path, enabled)?)
-        }
-
-        // BYOK 模型列表
-        "models_list" => {
-            let base = string(&args, "baseUrl")?;
-            let key = opt_string(&args, "apiKey").unwrap_or_default();
-            json(models::fetch(&base, &key).await?)
         }
 
         // git

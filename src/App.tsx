@@ -1,6 +1,5 @@
 import { useEffect, useState } from "react";
 
-import { ByokView } from "@/features/byok/ByokView";
 import { CliConsole } from "@/features/debug/CliConsole";
 import { PluginsView } from "@/features/plugins/PluginsView";
 import { SessionsView } from "@/features/sessions/SessionsView";
@@ -15,7 +14,6 @@ export function App() {
   const [cli, setCli] = useState<CliInfo | { error: string } | null>(null);
   const cfg = useConfig((s) => s.config);
   const init = useConfig((s) => s.init);
-  const profile = cfg.profiles.find((p) => p.id === cfg.activeProfileId);
 
   useEffect(() => {
     void init();
@@ -33,7 +31,6 @@ export function App() {
         <div className="text-[12px] font-medium text-ink">Claude Code</div>
         <div className="truncate text-[11px] text-ink-faint">
           {cli === null ? "正在查找…" : "error" in cli ? "未找到 CLI" : (cli.version?.split(" ")[0] ?? "已就绪")}
-          {profile ? ` · ${profile.name}` : ""}
         </div>
       </div>
     </div>
@@ -42,7 +39,6 @@ export function App() {
   return (
     <AppShell route={route} onRoute={setRoute} footer={footer}>
       {route === "sessions" && <SessionsView />}
-      {route === "byok" && <ByokView />}
       {route === "skills" && <SkillsView />}
       {route === "plugins" && <PluginsView />}
       {route === "debug" && <CliConsole />}

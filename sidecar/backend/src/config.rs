@@ -1,60 +1,17 @@
-//! Loom 自身配置：BYOK 多套配置、插件目录、会话置顶/归档标记、CLI 路径覆盖。
-//! 存放于平台配置目录（`paths::loom_config_dir`），Unix 下权限 0600（内含 API Key）。
+//! Loom 自身配置：插件目录、会话置顶/归档标记、CLI 路径与默认权限模式。
+//! Provider/API Key 不在这里，交给 cc-switch 或 Claude 自己的 settings.json。
 
 use std::collections::HashMap;
 use std::io::Write;
 use std::path::PathBuf;
 
 use serde::{Deserialize, Serialize};
+use serde_json::Value;
 use tauri::AppHandle;
 
 use crate::paths;
 
 const FILE: &str = "config.json";
-
-/// 模型映射。字段保持扁平是为了兼容旧配置（旧版只有 opus/sonnet/haiku 三个字符串）。
-#[derive(Debug, Clone, Default, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase", default)]
-pub struct ModelMap {
-    /// 实际请求模型名，写入 ANTHROPIC_DEFAULT_*_MODEL；留空则沿用 CLI 默认
-    pub opus: String,
-    pub sonnet: String,
-    pub haiku: String,
-    /// Claude Code 新增的 Fable 角色
-    pub fable: String,
-    /// 子代理模型 → CLAUDE_CODE_SUBAGENT_MODEL
-    pub subagent: String,
-    /// 默认兜底模型 → ANTHROPIC_MODEL
-    pub fallback: String,
-    /// /model 菜单里显示的名称 → ANTHROPIC_DEFAULT_*_MODEL_NAME
-    pub opus_name: String,
-    pub sonnet_name: String,
-    pub haiku_name: String,
-    pub fable_name: String,
-    /// 模型名追加 `[1m]`，声明 1M 上下文
-    pub opus_million: bool,
-    pub sonnet_million: bool,
-    pub haiku_million: bool,
-    pub fable_million: bool,
-    pub subagent_million: bool,
-    pub fallback_million: bool,
-}
-
-#[derive(Debug, Clone, Default, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase", default)]
-pub struct Profile {
-    pub id: String,
-    pub name: String,
-    pub notes: String,
-    pub website: String,
-    pub base_url: String,
-    pub api_key: String,
-    /// ANTHROPIC_AUTH_TOKEN（默认，多数中转网关用）或 ANTHROPIC_API_KEY
-    pub auth_field: String,
-    /// 请求地址是否为完整 URL（仅用于界面展示/校验，不改变 BASE_URL 的写法）
-    pub full_url: bool,
-    pub models: ModelMap,
-}
 
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase", default)]
@@ -73,8 +30,6 @@ pub struct SessionFlag {
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase", default)]
 pub struct LoomConfig {
-    pub active_profile_id: Option<String>,
-    pub profiles: Vec<Profile>,
     /// 传给 `claude --plugin-dir` 的外部插件目录
     pub plugin_dirs: Vec<PluginDir>,
     pub session_flags: HashMap<String, SessionFlag>,
@@ -90,11 +45,22 @@ fn config_path(app: &AppHandle) -> Result<PathBuf, String> {
 
 pub fn load(app: &AppHandle) -> Result<LoomConfig, String> {
     let path = config_path(app)?;
-    match std::fs::read_to_string(&path) {
-        Ok(s) => serde_json::from_str(&s).map_err(|e| format!("配置文件损坏（{}）：{e}", path.display())),
-        Err(e) if e.kind() == std::io::ErrorKind::NotFound => Ok(LoomConfig::default()),
-        Err(e) => Err(format!("读取配置失败：{e}")),
+    let raw = match std::fs::read_to_string(&path) {
+        Ok(s) => s,
+        Err(e) if e.kind() == std::io::ErrorKind::NotFound => return Ok(LoomConfig::default()),
+        Err(e) => return Err(format!("读取配置失败：{e}")),
+    };
+    let cfg: LoomConfig = serde_json::from_str(&raw)
+        .map_err(|e| format!("配置文件损坏（{}）：{e}", path.display()))?;
+
+    // 旧版 BYOK 配置（profiles / activeProfileId）在这里清理掉：
+    // Loom 不再保存 API Key，provider 交给 cc-switch / Claude settings。
+    if let Ok(Value::Object(map)) = serde_json::from_str::<Value>(&raw) {
+        if map.contains_key("profiles") || map.contains_key("activeProfileId") {
+            let _ = save(app, &cfg);
+        }
     }
+    Ok(cfg)
 }
 
 pub fn save(app: &AppHandle, cfg: &LoomConfig) -> Result<(), String> {
@@ -140,43 +106,20 @@ mod tests {
     #[test]
     fn defaults_and_roundtrip() {
         let cfg: LoomConfig = serde_json::from_str("{}").unwrap();
-        assert!(cfg.profiles.is_empty() && cfg.session_flags.is_empty());
+        assert!(cfg.session_flags.is_empty());
         let cfg = LoomConfig {
-            active_profile_id: Some("p1".into()),
-            profiles: vec![Profile {
-                id: "p1".into(),
-                name: "官方代理".into(),
-                base_url: "https://example.test".into(),
-                api_key: "sk-x".into(),
-                notes: String::new(),
-                website: String::new(),
-                auth_field: "ANTHROPIC_AUTH_TOKEN".into(),
-                full_url: false,
-                models: ModelMap {
-                sonnet: "m-s".into(),
-                fable: "m-f".into(),
-                subagent: "m-sub".into(),
-                fallback: "m-def".into(),
-                sonnet_name: "Sonnet 显示名".into(),
-                fable_million: true,
-                ..Default::default()
-            },
-            }],
             plugin_dirs: vec![PluginDir { path: PathBuf::from("a"), enabled: true }],
             session_flags: HashMap::from([("s".to_string(), SessionFlag { pinned: true, archived: false })]),
-            permission_mode: None,
-            cli_path: None,
+            permission_mode: Some("acceptEdits".into()),
+            cli_path: Some(PathBuf::from("/usr/bin/claude")),
         };
         let back: LoomConfig = serde_json::from_str(&serde_json::to_string(&cfg).unwrap()).unwrap();
-        assert_eq!(back.profiles[0].models.sonnet, "m-s");
-        assert_eq!(back.profiles[0].models.fable, "m-f");
-        assert_eq!(back.profiles[0].models.subagent, "m-sub");
-        assert_eq!(back.profiles[0].models.sonnet_name, "Sonnet 显示名");
-        assert!(back.profiles[0].models.fable_million);
-        assert_eq!(back.profiles[0].auth_field, "ANTHROPIC_AUTH_TOKEN");
+        assert!(back.plugin_dirs[0].enabled);
         assert!(back.session_flags["s"].pinned);
-        // 未知字段不应导致配置无法加载（向前兼容）
-        let older: LoomConfig = serde_json::from_str(r#"{"futureField": 1}"#).unwrap();
-        assert!(older.profiles.is_empty());
+        assert_eq!(back.permission_mode.as_deref(), Some("acceptEdits"));
+        assert_eq!(back.cli_path.as_deref(), Some(std::path::Path::new("/usr/bin/claude")));
+        // 未知字段（包括旧版 BYOK profiles）不应导致配置无法加载
+        let older: LoomConfig = serde_json::from_str(r#"{"profiles":[{"apiKey":"sk-old"}]}"#).unwrap();
+        assert!(older.plugin_dirs.is_empty());
     }
 }

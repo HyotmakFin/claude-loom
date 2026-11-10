@@ -19,7 +19,7 @@ Loom 0.5 起由三个进程/层组成：
 
 | 路径 | 作用 |
 | --- | --- |
-| `src/` | React 渲染层：会话、聊天、预览、BYOK、Skill、插件、CLI 调试 |
+| `src/` | React 渲染层：会话、聊天、预览、Skill、插件、CLI 调试 |
 | `src/lib/electron.ts` | `window.loom` 桥的 TypeScript 封装（invoke / onEvent / 对话框 / 剪贴板） |
 | `electron/main.cjs` | 创建窗口、启动 sidecar、转发 IPC/事件、系统对话框 |
 | `electron/preload.cjs` | `contextBridge` 暴露最小 API；渲染层无 Node 权限 |
@@ -57,8 +57,8 @@ Electron main 收到后 `webContents.send("loom:event", event, payload)`，prelo
 - **发消息**：`cli_start` 以 `claude -p --input-format stream-json --output-format stream-json --verbose`
   启动子进程；前端把 user 消息/control_response 通过 `cli_send` 写回 stdin；sidecar 逐行解析 stdout，
   原样转成事件。权限请求（`control_request`）在前端渲染成确认卡片。
-- **配置/密钥**：`~/.config/dev.loom.app/config.json`（macOS Application Support、Windows AppData），
-  Unix 权限 0600。API Key 明文保存，切勿共享机器。
+- **配置**：`~/.config/dev.loom.app/config.json` 只保存插件目录、会话置顶/归档、CLI 路径和
+  权限模式。Provider/API Key 由 cc-switch 或 Claude Code 的 `settings.json` 管理，Loom 不读写。
 - **预览**：`preview_file` 读取文件并生成 data URL；localhost 用 iframe 内嵌，其他地址交给
   Electron `shell.openExternal`。
 - **删除/分叉**：直接操作 JSONL；删除按整轮移除并备份到配置目录的 `session-backups/`。

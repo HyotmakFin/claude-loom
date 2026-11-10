@@ -1,16 +1,7 @@
 import { describe, expect, it } from "vitest";
 
-import type { ChatMessage, LoomConfig } from "./types";
+import type { ChatMessage } from "./types";
 import { contextOf, formatTokens, modelLabel, modelOf } from "./hud";
-
-const emptyConfig: LoomConfig = {
-  activeProfileId: null,
-  profiles: [],
-  pluginDirs: [],
-  sessionFlags: {},
-  cliPath: null,
-  permissionMode: null,
-};
 
 const assistant = (model: string, usage: Partial<ChatMessage["usage"]>): ChatMessage => ({
   role: "assistant",
@@ -33,7 +24,7 @@ const assistant = (model: string, usage: Partial<ChatMessage["usage"]>): ChatMes
 describe("hud helpers", () => {
   it("shows used context from the last assistant usage", () => {
     const messages = [assistant("claude-sonnet-5-5", { inputTokens: 2_000, cacheReadInputTokens: 98_000 })];
-    const ctx = contextOf(undefined, messages, emptyConfig);
+    const ctx = contextOf(undefined, messages);
     expect(ctx).not.toBeNull();
     expect(ctx!.used).toBe(100_000);
     expect(ctx!.window).toBe(200_000);
@@ -41,50 +32,13 @@ describe("hud helpers", () => {
     expect(modelOf(undefined, messages)).toBe("claude-sonnet-5-5");
   });
 
-  it("infers a 1M window when usage exceeds 200k", () => {
-    const messages = [assistant("deepseek-flash", { inputTokens: 1_000, cacheReadInputTokens: 540_000 })];
-    const ctx = contextOf(undefined, messages, emptyConfig)!;
-    expect(ctx.window).toBe(1_000_000);
-    expect(Math.round(ctx.percent)).toBe(54);
-  });
+  it("infers a 1M window when usage exceeds 200k or the model has [1m]", () => {
+    const big = contextOf(undefined, [assistant("deepseek-flash", { inputTokens: 1_000, cacheReadInputTokens: 540_000 })])!;
+    expect(big.window).toBe(1_000_000);
+    expect(Math.round(big.percent)).toBe(54);
 
-  it("uses the profile million flag", () => {
-    const cfg: LoomConfig = {
-      ...emptyConfig,
-      activeProfileId: "p",
-      profiles: [
-        {
-          id: "p",
-          name: "x",
-          notes: "",
-          website: "",
-          baseUrl: "",
-          apiKey: "",
-          authField: "",
-          fullUrl: false,
-          models: {
-            opus: "claude-opus-5-5",
-            sonnet: "claude-sonnet-5-5",
-            haiku: "",
-            fable: "",
-            subagent: "",
-            fallback: "",
-            opusName: "",
-            sonnetName: "",
-            haikuName: "",
-            fableName: "",
-            opusMillion: false,
-            sonnetMillion: true,
-            haikuMillion: false,
-            fableMillion: false,
-            subagentMillion: false,
-            fallbackMillion: false,
-          },
-        },
-      ],
-    };
-    const ctx = contextOf(undefined, [assistant("claude-sonnet-5-5", { inputTokens: 1_000 })], cfg)!;
-    expect(ctx.window).toBe(1_000_000);
+    const tagged = contextOf(undefined, [assistant("deepseek-flash[1m]", { inputTokens: 1_000 })])!;
+    expect(tagged.window).toBe(1_000_000);
   });
 
   it("formats labels and tokens", () => {

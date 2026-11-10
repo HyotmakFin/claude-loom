@@ -1,4 +1,4 @@
-/** BYOK 配置 + 环境信息。所有 CLI 启动参数都从这里派生（见 lib/cliOptions.ts）。 */
+/** Loom 自身配置 + 环境信息。Provider/密钥由 cc-switch 或 Claude settings 管理。 */
 import { create } from "zustand";
 
 import { errorText, ipc } from "@/lib/ipc";
@@ -6,8 +6,6 @@ import type { AppInfo, LoomConfig } from "@/lib/types";
 
 export function emptyConfig(): LoomConfig {
   return {
-    activeProfileId: null,
-    profiles: [],
     pluginDirs: [],
     sessionFlags: {},
     cliPath: null,

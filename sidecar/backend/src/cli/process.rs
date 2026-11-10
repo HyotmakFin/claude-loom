@@ -30,16 +30,9 @@ const GRACE: Duration = Duration::from_secs(3);
 pub struct StartOptions {
     pub cwd: PathBuf,
     pub resume: Option<String>,
-    pub model: Option<String>,
     pub permission_mode: Option<String>,
     #[serde(default)]
     pub plugin_dirs: Vec<PathBuf>,
-    /// 额外注入的环境变量（BYOK：ANTHROPIC_BASE_URL / ANTHROPIC_API_KEY …）
-    #[serde(default)]
-    pub env: HashMap<String, String>,
-    /// 需要从继承环境中移除的变量（例如切换 BYOK 时去掉 ANTHROPIC_AUTH_TOKEN）
-    #[serde(default)]
-    pub env_remove: Vec<String>,
     #[serde(default)]
     pub partial_messages: bool,
     pub cli_path: Option<PathBuf>,
@@ -114,9 +107,6 @@ impl CliRegistry {
         if let Some(id) = &opts.resume {
             cmd.arg("--resume").arg(id);
         }
-        if let Some(m) = &opts.model {
-            cmd.arg("--model").arg(m);
-        }
         if let Some(m) = &opts.permission_mode {
             cmd.arg("--permission-mode").arg(m);
         }
@@ -128,11 +118,7 @@ impl CliRegistry {
             .env("PATH", locate::search_path())
             // 若 Loom 本身是从 Claude Code 的终端里启动的，避免子进程误判为嵌套会话
             .env_remove("CLAUDECODE");
-        for key in &opts.env_remove {
-            cmd.env_remove(key);
-        }
-        cmd.envs(&opts.env)
-            .stdin(Stdio::piped())
+        cmd.stdin(Stdio::piped())
             .stdout(Stdio::piped())
             .stderr(Stdio::piped())
             .kill_on_drop(true);

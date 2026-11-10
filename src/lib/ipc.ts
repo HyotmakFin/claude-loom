@@ -6,7 +6,6 @@ import type {
   FilePreview,
   GitInfo,
   LoomConfig,
-  ModelList,
   PluginDirInfo,
   PluginsListing,
   SessionDetail,
@@ -23,11 +22,8 @@ export interface CliInfo {
 export interface StartOptions {
   cwd: string;
   resume?: string;
-  model?: string;
   permissionMode?: string;
   pluginDirs?: string[];
-  env?: Record<string, string>;
-  envRemove?: string[];
   partialMessages?: boolean;
   cliPath?: string;
 }
@@ -76,7 +72,6 @@ export const ipc = {
   // 预览 / 环境
   previewFile: (path: string) => invoke<FilePreview>("preview_file", { path }),
   gitInfo: (path: string) => invoke<GitInfo>("git_info", { path }),
-  modelsList: (baseUrl: string, apiKey: string) => invoke<ModelList>("models_list", { baseUrl, apiKey }),
 };
 
 export function errorText(e: unknown): string {

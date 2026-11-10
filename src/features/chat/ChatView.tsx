@@ -127,13 +127,8 @@ export function ChatView({
     };
   }, [cwd, run?.state.phase]);
 
-  const hudModel = useMemo(() => {
-    const fromRun = modelOf(run, detail?.messages);
-    if (fromRun) return fromRun;
-    const profile = cfg.profiles.find((p) => p.id === cfg.activeProfileId);
-    return profile?.models.fallback?.trim() || profile?.models.sonnet?.trim() || null;
-  }, [run, detail, cfg]);
-  const hudContext = useMemo(() => contextOf(run, detail?.messages, cfg), [run, detail, cfg]);
+  const hudModel = useMemo(() => modelOf(run, detail?.messages), [run, detail]);
+  const hudContext = useMemo(() => contextOf(run, detail?.messages), [run, detail]);
   const permissionMode = run?.state.permissionMode ?? cfg.permissionMode ?? "default";
   const changeMode = async (mode: string) => {
     if (mode === "bypassPermissions" && !window.confirm("跳过所有权限确认？工具调用将不再询问。")) {

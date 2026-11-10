@@ -10,7 +10,7 @@ import { Icon, type IconName } from "@/components/ui/Icon";
 import { useTheme } from "@/stores/theme";
 import { ThemeMenu } from "./ThemeMenu";
 
-export type Route = "sessions" | "byok" | "skills" | "plugins" | "debug";
+export type Route = "sessions" | "skills" | "plugins" | "debug";
 
 const NAV: { group: string; items: { id: Route; label: string; icon: IconName; ready: boolean }[] }[] = [
   {
@@ -20,7 +20,6 @@ const NAV: { group: string; items: { id: Route; label: string; icon: IconName; r
   {
     group: "配置",
     items: [
-      { id: "byok", label: "API 配置", icon: "key", ready: true },
       { id: "skills", label: "Skill", icon: "spark", ready: true },
       { id: "plugins", label: "插件", icon: "puzzle", ready: true },
     ],
