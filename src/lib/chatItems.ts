@@ -39,10 +39,16 @@ function resultText(content: unknown): string {
 class Builder {
   items: ChatItem[] = [];
   results = new Map<string, { content: string; isError: boolean }>();
+  /** 按构建顺序生成稳定 key：消息只会追加，同一位置的 key 在重算时保持不变，避免整段重新挂载。 */
+  private seq = 0;
+
+  nextKey(): string {
+    return `c${++this.seq}`;
+  }
 
   addRaw(role: ChatItem["role"], content: RawContent, timestamp: string | null, uuid: string | null = null) {
     if (typeof content === "string") {
-      if (content.trim()) this.items.push({ key: cryptoKey(), role, uuid, text: content, thinking: null, tools: [], timestamp });
+      if (content.trim()) this.items.push({ key: this.nextKey(), role, uuid, text: content, thinking: null, tools: [], timestamp });
       return;
     }
     if (!Array.isArray(content)) return;
@@ -67,7 +73,7 @@ class Builder {
     }
     if (!texts.length && !thinking.length && !tools.length) return;
     this.items.push({
-      key: cryptoKey(),
+      key: this.nextKey(),
       role,
       uuid,
       text: texts.length ? texts.join("\n") : null,
@@ -91,11 +97,6 @@ class Builder {
   }
 }
 
-let seq = 0;
-function cryptoKey(): string {
-  return `m${++seq}`;
-}
-
 export function itemsFromHistory(messages: ChatMessage[]): ChatItem[] {
   const b = new Builder();
   for (const m of messages) {
@@ -107,7 +108,7 @@ export function itemsFromHistory(messages: ChatMessage[]): ChatItem[] {
     const hasTools = m.toolUses.length > 0;
     if (!hasText && !hasTools && !m.thinking) continue;
     b.items.push({
-      key: cryptoKey(),
+      key: b.nextKey(),
       role: m.role,
       uuid: m.uuid,
       text: m.text,
@@ -129,7 +130,7 @@ export function itemsFromCli(messages: CliMessage[]): ChatItem[] {
       const r = m as { is_error?: boolean; result?: string; subtype?: string };
       if (r.is_error || (r.subtype && !r.subtype.startsWith("success"))) {
         b.items.push({
-          key: cryptoKey(),
+          key: b.nextKey(),
           role: "system",
           uuid: null,
           text: r.result || `本轮以 ${r.subtype ?? "错误"} 结束`,

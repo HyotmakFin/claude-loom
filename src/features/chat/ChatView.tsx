@@ -109,7 +109,9 @@ export function ChatView({
   }, [session.id, isNew]);
 
   const historyItems = useMemo(() => (detail ? itemsFromHistory(detail.messages) : []), [detail]);
-  const liveItems = useMemo(() => (run ? itemsFromCli(run.messages) : []), [run]);
+  // 只依赖 messages：流式 partial 变化时不必重建整个实时消息列表
+  const runMessages = run?.messages;
+  const liveItems = useMemo(() => (runMessages ? itemsFromCli(runMessages) : []), [runMessages]);
   const partial = run?.partial ?? "";
 
   const cwd = detail?.session.projectPath ?? session.projectPath ?? null;

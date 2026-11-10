@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type MouseEvent } from "react";
+import { useEffect, useLayoutEffect, useRef, useState, type MouseEvent } from "react";
 
 import { copyText } from "@/lib/clipboard";
 
@@ -12,6 +12,15 @@ import { useMarkdown } from "@/lib/useMarkdown";
 export function Markdown({ source, className = "" }: { source: string; className?: string }) {
   const ref = useRef<HTMLDivElement>(null);
   const [visible, setVisible] = useState(() => typeof IntersectionObserver === "undefined");
+
+  // 已在视口（或 800px 预取范围）内的消息在首次绘制前就解析，避免先出纯文本再换成 Markdown 的闪烁。
+  useLayoutEffect(() => {
+    if (visible) return;
+    const el = ref.current;
+    if (!el) return;
+    const rect = el.getBoundingClientRect();
+    if (rect.top < window.innerHeight + 800 && rect.bottom > -800) setVisible(true);
+  }, [visible]);
 
   useEffect(() => {
     if (visible) return;
