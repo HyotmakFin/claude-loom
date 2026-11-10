@@ -23,7 +23,7 @@ use super::{locate, ndjson};
 pub const EVENT: &str = "loom://cli";
 
 /// stop 时先关闭 stdin 让 CLI 自行退出，超过该时长再强杀进程树。
-const GRACE: Duration = Duration::from_secs(3);
+const GRACE: Duration = Duration::from_millis(120);
 
 #[derive(Debug, Clone, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -221,9 +221,7 @@ async fn supervise(
         }
     };
 
-    // 先把 stdout 剩余的行发完，再宣告退出；工具的孙进程可能持有管道，所以设超时
-    let _ = tokio::time::timeout(Duration::from_secs(2), stdout_task).await;
-
+    // 先立刻宣告退出让 UI 解锁；stdout 剩余行在后台尽力排干
     app.state::<CliRegistry>().runs.lock().unwrap().remove(&run_id);
     emit(
         &app,
@@ -233,6 +231,7 @@ async fn supervise(
             killed,
         },
     );
+    let _ = tokio::time::timeout(Duration::from_millis(150), stdout_task).await;
 }
 
 async fn read_stdout(app: AppHandle, run_id: String, run: Arc<Run>, stdout: impl AsyncRead + Unpin) {

@@ -36,6 +36,8 @@ export interface RunSlice {
   partial: string;
   /** initialize 控制消息返回的可用斜杠命令 */
   commands: SlashCommand[];
+  /** 启动时的 Claude settings.json 版本；provider 切换后不同，需要重启 CLI */
+  settingsStamp: string | null;
 }
 
 interface RunsStore {
@@ -46,6 +48,7 @@ interface RunsStore {
   interrupt: (runId: string) => Promise<void>;
   setPermissionMode: (runId: string, mode: string) => Promise<void>;
   stop: (runId: string) => Promise<void>;
+  clearMessages: (runId: string) => void;
   forget: (runId: string) => void;
 }
 
@@ -55,7 +58,7 @@ let seq = 0;
 const deciding = new Set<string>();
 
 function emptySlice(runId: string): RunSlice {
-  return { runId, state: initialRunState, log: [], messages: [], partial: "", commands: [] };
+  return { runId, state: initialRunState, log: [], messages: [], partial: "", commands: [], settingsStamp: null };
 }
 
 function extractCommands(msg: CliMessage): SlashCommand[] | null {
@@ -102,7 +105,7 @@ export const useRuns = create<RunsStore>((set, get) => {
   void listen<CliEvent>(CLI_EVENT, ({ payload: ev }) => {
     switch (ev.kind) {
       case "spawned":
-        return apply(ev.runId, { type: "spawned" });
+        return apply(ev.runId, { type: "spawned", pid: ev.pid });
       case "message":
         return apply(ev.runId, { type: "cli_message", msg: ev.msg, at: Date.now() }, { dir: "in", payload: ev.msg }, ev.msg);
       case "stderr":
@@ -118,9 +121,14 @@ export const useRuns = create<RunsStore>((set, get) => {
     runs: {},
 
     async start(opts) {
+      const settingsStamp = await ipc.settingsStamp().catch(() => null);
       const runId = await ipc.cliStart(opts);
       // spawned 事件可能先于 invoke 返回到达，apply 会按需创建 slice
       apply(runId, null);
+      set((s) => {
+        const cur = s.runs[runId] ?? emptySlice(runId);
+        return { runs: { ...s.runs, [runId]: { ...cur, settingsStamp } } };
+      });
       // 等 spawned 事件落库，避免紧随其后的 send 因 process=spawning 被拒
       for (let i = 0; i < 60; i++) {
         if (get().runs[runId]?.state.process === "alive") break;
@@ -183,7 +191,26 @@ export const useRuns = create<RunsStore>((set, get) => {
     },
 
     async stop(runId) {
-      await ipc.cliStop(runId);
+      // 立即解锁 UI；真正的进程终止在 sidecar 里紧接着做
+      const cur = get().runs[runId];
+      if (cur && cur.state.process === "alive") {
+        apply(runId, { type: "exited", code: null, killed: true });
+      }
+      try {
+        await ipc.cliStop(runId);
+      } catch {
+        // 进程可能已经自己退出
+      }
+    },
+
+    clearMessages(runId) {
+      set((s) => {
+        const cur = s.runs[runId];
+        if (!cur) return s;
+        return {
+          runs: { ...s.runs, [runId]: { ...cur, messages: [], partial: "" } },
+        };
+      });
     },
 
     forget(runId) {

@@ -32,6 +32,7 @@ export interface PendingPermission {
 export interface RunState {
   phase: Phase;
   process: ProcessState;
+  pid: number | null;
   sessionId: string | null;
   /** CLI 当前权限模式（default / acceptEdits / plan / bypassPermissions） */
   permissionMode: string | null;
@@ -42,7 +43,7 @@ export interface RunState {
 }
 
 export type Signal =
-  | { type: "spawned" }
+  | { type: "spawned"; pid?: number | null }
   | { type: "user_sent" }
   | { type: "cli_message"; msg: CliMessage; at: number }
   | { type: "permission_decided"; requestId: string }
@@ -52,6 +53,7 @@ export type Signal =
 export const initialRunState: RunState = {
   phase: "idle",
   process: "spawning",
+  pid: null,
   sessionId: null,
   permissionMode: null,
   pending: [],
@@ -91,7 +93,7 @@ export function canSend(s: RunState): boolean {
 export function reduce(state: RunState, signal: Signal): RunState {
   switch (signal.type) {
     case "spawned":
-      return { ...state, process: "alive" };
+      return { ...state, process: "alive", pid: signal.pid ?? state.pid };
 
     case "user_sent":
       return go({ ...state, lastResult: null, error: null }, "streaming");

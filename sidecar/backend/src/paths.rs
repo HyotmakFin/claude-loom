@@ -46,6 +46,25 @@ pub fn loom_config_dir(app: &tauri::AppHandle) -> Result<PathBuf, String> {
     Ok(dir)
 }
 
+/// Claude settings.json 中 provider 相关部分的版本标记。
+/// 只哈希 env 与顶层 model，避免 CLI 改主题等无关字段导致误重启。
+pub fn claude_settings_stamp() -> String {
+    use std::hash::{Hash, Hasher};
+    let Some(path) = claude_dir().ok().map(|d| d.join("settings.json")) else {
+        return "none".to_string();
+    };
+    let Ok(text) = std::fs::read_to_string(&path) else {
+        return "none".to_string();
+    };
+    let Ok(v) = serde_json::from_str::<serde_json::Value>(&text) else {
+        return "invalid".to_string();
+    };
+    let mut h = std::collections::hash_map::DefaultHasher::new();
+    v.get("env").map(|x| x.to_string()).unwrap_or_default().hash(&mut h);
+    v.get("model").map(|x| x.to_string()).unwrap_or_default().hash(&mut h);
+    format!("{:x}", h.finish())
+}
+
 pub fn ensure_dir(p: &std::path::Path) -> Result<(), String> {
     std::fs::create_dir_all(p).map_err(|e| format!("无法创建目录 {}：{e}", p.display()))
 }

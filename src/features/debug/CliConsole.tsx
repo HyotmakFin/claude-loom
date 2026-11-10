@@ -36,7 +36,7 @@ export function CliConsole() {
 
   const run = useRuns((s) => (runId ? s.runs[runId] : undefined));
   const cfg = useConfig((s) => s.config);
-  const { start, send, decide, interrupt, stop } = useRuns.getState();
+  const { start, send, decide, stop } = useRuns.getState();
 
   useEffect(() => {
     homeDir().then(setCwd, () => {});
@@ -171,7 +171,7 @@ export function CliConsole() {
               <span className="ml-1">发送</span>
             </span>
             {busy ? (
-              <Button size="sm" icon="stop" onClick={() => guard(() => interrupt(runId!))}>
+              <Button size="sm" icon="stop" onClick={() => guard(() => stop(runId!))}>
                 中断
               </Button>
             ) : (

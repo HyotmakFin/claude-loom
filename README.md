@@ -57,6 +57,7 @@ sidecar 通过 `#[path]` 直接包含 `sidecar/backend/src` 的模块；项目�
   localhost 网页内嵌，其余可在系统浏览器打开。
 - **深色模式**：跟随系统 / 浅色 / 深色三态切换，代码高亮同步。
 - **权限**：CLI 的工具权限请求会变成确认卡片（允许 / 始终允许 / 拒绝 / 拒绝并中止）。
+- **刷新**：侧栏右上角刷新按钮 / `F5` / `Ctrl+R`，会停止所有 CLI 进程并重载页面。
 - **HUD**：底部状态栏显示当前模型、会话目录、git 分支 / dirty / ahead-behind、
   上下文用量（tokens 与百分比）；可直接切换权限模式
   （default / acceptEdits / plan / bypassPermissions），并一键回到最早消息。
@@ -74,43 +75,43 @@ Provider/API Key 由 cc-switch 或 `settings.json` 管理；Loom 不读取也不
 
 ## 安装
 
-从 [Releases](https://github.com/HyotMakFin/claude-loom/releases) 下载 0.5.4 的 Linux 包：
+从 [Releases](https://github.com/HyotMakFin/claude-loom/releases) 下载 0.5.5 的 Linux 包：
 
 **Arch Linux**
 
 ```bash
-sudo pacman -U claude-loom-0.5.4.pacman
+sudo pacman -U claude-loom-0.5.5.pacman
 ```
 
 **Debian / Ubuntu**
 
 ```bash
-sudo apt install ./Loom-0.5.4-amd64.deb
+sudo apt install ./Loom-0.5.5-amd64.deb
 ```
 
 **Fedora / RHEL / openSUSE**
 
 ```bash
-sudo dnf install ./Loom-0.5.4-x86_64.rpm
-# openSUSE: sudo zypper install ./Loom-0.5.4-x86_64.rpm
+sudo dnf install ./Loom-0.5.5-x86_64.rpm
+# openSUSE: sudo zypper install ./Loom-0.5.5-x86_64.rpm
 ```
 
 **其他 Linux（AppImage）**
 
 ```bash
-chmod +x Loom-0.5.4.AppImage
-./Loom-0.5.4.AppImage
+chmod +x Loom-0.5.5.AppImage
+./Loom-0.5.5.AppImage
 ```
 
-无 FUSE 时：`./Loom-0.5.4.AppImage --appimage-extract-and-run`。
+无 FUSE 时：`./Loom-0.5.5.AppImage --appimage-extract-and-run`。
 
 **Windows**
 
-运行 `Loom-0.5.4-Setup.exe`。未签名，SmartScreen 提示时选择「更多信息 → 仍要运行」。
+运行 `Loom-0.5.5-Setup.exe`。未签名，SmartScreen 提示时选择「更多信息 → 仍要运行」。
 
 **macOS**
 
-打开 `Loom-0.5.4-universal.dmg`，把 Loom 拖进 Applications；未签名，首次启动右键 → 打开，
+打开 `Loom-0.5.5-universal.dmg`，把 Loom 拖进 Applications；未签名，首次启动右键 → 打开，
 或 `xattr -dr com.apple.quarantine /Applications/Loom.app`。
 
 ## 开发
@@ -146,7 +147,7 @@ npx electron-builder --mac --universal  # macOS 通用 DMG（需 macOS）
 ## 帧率验收
 
 ```bash
-LOOM_FPS_OVERLAY=1 ./release/Loom-0.5.4.AppImage
+LOOM_FPS_OVERLAY=1 ./release/Loom-0.5.5.AppImage
 ```
 
 右下角会显示当前 rAF 帧率。在 200Hz 显示器上实测稳定 **200.0 fps**。

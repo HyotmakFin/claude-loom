@@ -2,11 +2,12 @@
  * 应用外框：侧栏铺在画布色上，主工作区是一块内缩的白色圆角面板。
  * 各模块完成后把 NAV 中对应项的 ready 置为 true。
  */
-import type { ReactNode } from "react";
+import { useCallback, useEffect, type ReactNode } from "react";
 
 import markDarkUrl from "@/assets/brand/loom-mark-dark.svg";
 import markLightUrl from "@/assets/brand/loom-mark.svg";
 import { Icon, type IconName } from "@/components/ui/Icon";
+import { ipc } from "@/lib/ipc";
 import { useTheme } from "@/stores/theme";
 import { ThemeMenu } from "./ThemeMenu";
 
@@ -43,6 +44,26 @@ function Logo({ dark }: { dark: boolean }) {
 
 export function AppShell({ route, onRoute, footer, children }: Props) {
   const theme = useTheme((s) => s.resolved);
+  const refresh = useCallback(async () => {
+    try {
+      await ipc.cliStopAll();
+    } catch {
+      // 后端不在时也允许刷新
+    }
+    window.location.reload();
+  }, []);
+
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "F5" || ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "r")) {
+        e.preventDefault();
+        void refresh();
+      }
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [refresh]);
+
   return (
     <div className="flex h-full gap-2 bg-canvas p-2 pl-0">
       <aside className="flex w-56 shrink-0 flex-col pl-3">
@@ -50,6 +71,15 @@ export function AppShell({ route, onRoute, footer, children }: Props) {
           <Logo dark={theme === "dark"} />
           <span className="font-serif text-[17px] font-semibold tracking-[-0.01em] text-ink">Loom</span>
           <ThemeMenu />
+          <button
+            type="button"
+            title="刷新页面（F5 / Ctrl+R）"
+            aria-label="刷新页面"
+            onClick={() => void refresh()}
+            className="ml-auto flex size-7 items-center justify-center rounded-chip text-ink-faint hover:bg-hover hover:text-ink"
+          >
+            <Icon name="refresh" size={14} />
+          </button>
         </div>
 
         <nav className="mt-2 flex flex-col gap-5">

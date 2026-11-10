@@ -203,8 +203,24 @@ export function ChatView({
   const lastDone = run?.state.lastResult;
   const runSessionId = run?.state.sessionId ?? null;
   useEffect(() => {
-    if (run?.state.phase === "done") onChanged();
-  }, [run?.state.phase, lastDone, onChanged]);
+    if (run?.state.phase !== "done") return;
+    onChanged();
+    // 运行结束后把 JSONL 里已经落盘的一轮读回来，替换 live 消息：
+    // 这样被中断/完成的助手回复也会带上 uuid，可以删除或分叉，而不用切走再切回。
+    const timer = setTimeout(() => {
+      const sid = runSessionId ?? (isNew ? null : session.id);
+      if (!sid) return;
+      ipc.sessionMessages(sid).then(
+        (d) => {
+          setDetail(d);
+          setPending(null);
+          if (runId) useRuns.getState().clearMessages(runId);
+        },
+        () => {},
+      );
+    }, 700);
+    return () => clearTimeout(timer);
+  }, [run?.state.phase, lastDone, onChanged, runSessionId, runId, session.id, isNew]);
   useEffect(() => {
     // 新会话第一次拿到 sessionId 后刷新列表，让它出现在左侧
     if (isNew && runSessionId && !newSidNotified.current) {
@@ -220,7 +236,20 @@ export function ChatView({
 
   const ensureRun = async (): Promise<string> => {
     const existing = runId ? useRuns.getState().runs[runId] : undefined;
-    if (existing && existing.state.process === "alive") return runId!;
+    if (existing && existing.state.process === "alive") {
+      // cc-switch 切 provider 会改 ~/.claude/settings.json；旧 CLI 进程仍带着旧配置，
+      // 必须结束它并用新 settings 重新 --resume，否则会继续请求旧 provider。
+      const stamp = await ipc.settingsStamp().catch(() => null);
+      if (stamp && existing.settingsStamp && stamp !== existing.settingsStamp) {
+        await useRuns.getState().stop(runId!);
+        // 给 sidecar 一点时间杀掉旧进程组，避免新旧 CLI 同时写同一个 transcript
+        await new Promise((r) => setTimeout(r, 180));
+        sessionRuns.delete(session.id);
+        setRunId(null);
+      } else {
+        return runId!;
+      }
+    }
     const cwd = detail?.session.projectPath ?? session.projectPath ?? null;
     if (!cwd) throw new Error("该会话没有记录工作目录，无法续聊");
     const id = await useRuns.getState().start(startOptions(cfg, cwd, isNew ? undefined : session.id));
@@ -292,6 +321,9 @@ export function ChatView({
 
   const head = run?.state.pending[0];
   const runSlice: RunSlice | undefined = run;
+  // 自己启动的 CLI 在运行记录里的 pid 与 session.live 相同；只有外部进程才禁用删除
+  const liveIsOurs = !!session.live && !!run && run.state.pid === session.live.pid;
+  const liveElsewhere = !!session.live && !liveIsOurs;
 
   return (
     <div className="flex h-full min-w-0">
@@ -360,7 +392,7 @@ export function ChatView({
                 item={item}
                 onCopy={handleCopy}
                 onFork={isNew ? undefined : handleFork}
-                onDelete={isNew || session.live ? undefined : handleDeleteRequest}
+                onDelete={isNew || liveElsewhere ? undefined : handleDeleteRequest}
               />
             ))}
             {beforeMark.map((item) => (

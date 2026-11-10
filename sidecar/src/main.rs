@@ -104,6 +104,11 @@ async fn dispatch(
 
         // app / platform
         "app_info" => json(paths::app_info(app.clone())?),
+        "settings_stamp" => json(paths::claude_settings_stamp()),
+        "cli_stop_all" => {
+            registry.shutdown();
+            json(serde_json::Value::Null)
+        }
         "system_fonts" => json(platform::system_fonts().await),
 
         // config

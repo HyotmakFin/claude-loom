@@ -34,6 +34,8 @@ export const ipc = {
   cliStart: (options: StartOptions) => invoke<string>("cli_start", { options }),
   cliSend: (runId: string, message: unknown) => invoke<void>("cli_send", { runId, message }),
   cliStop: (runId: string) => invoke<void>("cli_stop", { runId }),
+  cliStopAll: () => invoke<void>("cli_stop_all"),
+  settingsStamp: () => invoke<string>("settings_stamp"),
 
   // 环境
   appInfo: () => invoke<AppInfo>("app_info"),
