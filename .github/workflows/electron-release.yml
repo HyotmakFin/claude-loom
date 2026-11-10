@@ -1,0 +1,66 @@
+name: electron-release
+
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Release tag to upload to"
+        required: true
+        default: "v0.5.0"
+
+permissions:
+  contents: write
+
+jobs:
+  windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - uses: dtolnay/rust-toolchain@stable
+      - run: npm ci
+      - run: cargo build --release --manifest-path sidecar/Cargo.toml
+      - run: npm run build
+      - run: npx electron-builder --win --x64 --publish never
+        env:
+          CSC_IDENTITY_AUTO_DISCOVERY: "false"
+      - name: Upload Windows installer
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release upload "${{ inputs.tag }}" release/*.exe --clobber
+
+  macos:
+    runs-on: macos-14
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: aarch64-apple-darwin,x86_64-apple-darwin
+      - run: npm ci
+      - name: Build universal sidecar
+        run: |
+          cargo build --release --manifest-path sidecar/Cargo.toml --target aarch64-apple-darwin
+          cargo build --release --manifest-path sidecar/Cargo.toml --target x86_64-apple-darwin
+          mkdir -p sidecar/target/release
+          lipo -create \
+            sidecar/target/aarch64-apple-darwin/release/loom-backend \
+            sidecar/target/x86_64-apple-darwin/release/loom-backend \
+            -output sidecar/target/release/loom-backend
+          chmod +x sidecar/target/release/loom-backend
+      - run: npm run build
+      - run: npx electron-builder --mac --universal --publish never
+        env:
+          CSC_IDENTITY_AUTO_DISCOVERY: "false"
+      - name: Upload macOS disk image
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release upload "${{ inputs.tag }}" release/*.dmg --clobber

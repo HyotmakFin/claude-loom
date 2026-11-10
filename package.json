@@ -52,8 +52,12 @@
     ],
     "extraResources": [
       {
-        "from": "sidecar/target/release/loom-backend",
-        "to": "loom-backend"
+        "from": "sidecar/target/release",
+        "to": ".",
+        "filter": [
+          "loom-backend",
+          "loom-backend.exe"
+        ]
       }
     ],
     "linux": {
@@ -80,6 +84,22 @@
         "snappy",
         "libnotify"
       ]
+    },
+    "win": {
+      "target": [
+        "nsis"
+      ],
+      "icon": "electron/icon.png",
+      "artifactName": "Loom-${version}-Setup.${ext}"
+    },
+    "mac": {
+      "target": [
+        "dmg"
+      ],
+      "category": "public.app-category.developer-tools",
+      "icon": "electron/icon.png",
+      "artifactName": "Loom-${version}-${arch}.${ext}",
+      "notarize": false
     }
   },
   "license": "MIT"

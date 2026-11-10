@@ -14,8 +14,9 @@ const pending = new Map();
 
 function backendPath() {
   if (process.env.LOOM_BACKEND) return process.env.LOOM_BACKEND;
-  if (app.isPackaged) return path.join(process.resourcesPath, "loom-backend");
-  return path.join(__dirname, "..", "sidecar", "target", "debug", "loom-backend");
+  const name = process.platform === "win32" ? "loom-backend.exe" : "loom-backend";
+  if (app.isPackaged) return path.join(process.resourcesPath, name);
+  return path.join(__dirname, "..", "sidecar", "target", "debug", name);
 }
 
 function startBackend() {
@@ -71,7 +72,7 @@ function invoke(cmd, args) {
 }
 
 app.whenReady().then(() => {
-  Menu.setApplicationMenu(null);
+  if (process.platform !== "darwin") Menu.setApplicationMenu(null);
   startBackend();
   win = new BrowserWindow({
     width: 1280,
