@@ -44,6 +44,7 @@ interface RunsStore {
   send: (runId: string, text: string) => Promise<void>;
   decide: (runId: string, requestId: string, decision: PermissionDecision) => Promise<void>;
   interrupt: (runId: string) => Promise<void>;
+  setPermissionMode: (runId: string, mode: string) => Promise<void>;
   stop: (runId: string) => Promise<void>;
   forget: (runId: string) => void;
 }
@@ -160,6 +161,25 @@ export const useRuns = create<RunsStore>((set, get) => {
     async interrupt(runId) {
       const requestId = globalThis.crypto?.randomUUID?.() ?? `${Date.now()}-${Math.random()}`;
       await write(runId, { type: "control_request", request_id: requestId, request: { subtype: "interrupt" } });
+    },
+
+    async setPermissionMode(runId, mode) {
+      const requestId = globalThis.crypto?.randomUUID?.() ?? `${Date.now()}-${Math.random()}`;
+      await write(runId, {
+        type: "control_request",
+        request_id: requestId,
+        request: { subtype: "set_permission_mode", mode },
+      });
+      set((s) => {
+        const cur = s.runs[runId];
+        if (!cur) return s;
+        return {
+          runs: {
+            ...s.runs,
+            [runId]: { ...cur, state: { ...cur.state, permissionMode: mode } },
+          },
+        };
+      });
     },
 
     async stop(runId) {

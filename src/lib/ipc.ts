@@ -4,6 +4,7 @@ import { invoke } from "./electron";
 import type {
   AppInfo,
   FilePreview,
+  GitInfo,
   LoomConfig,
   PluginDirInfo,
   PluginsListing,
@@ -71,8 +72,9 @@ export const ipc = {
   pluginRemoveDir: (path: string) => invoke<void>("plugin_remove_dir", { path }),
   pluginToggle: (path: string, enabled: boolean) => invoke<void>("plugin_toggle", { path, enabled }),
 
-  // 预览
+  // 预览 / 环境
   previewFile: (path: string) => invoke<FilePreview>("preview_file", { path }),
+  gitInfo: (path: string) => invoke<GitInfo>("git_info", { path }),
 };
 
 export function errorText(e: unknown): string {

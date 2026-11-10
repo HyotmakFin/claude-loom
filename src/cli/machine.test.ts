@@ -56,9 +56,21 @@ describe("run state machine", () => {
     expect(s.pending).toHaveLength(0);
   });
 
-  it("captures the session id from any message", () => {
-    const s = run({ type: "spawned" }, msg({ type: "system", subtype: "init", session_id: "abc" }));
+  it("captures the session id and permission mode from init", () => {
+    const s = run(
+      { type: "spawned" },
+      msg({ type: "system", subtype: "init", session_id: "abc", permissionMode: "plan" }),
+    );
     expect(s.sessionId).toBe("abc");
+    expect(s.permissionMode).toBe("plan");
+  });
+
+  it("tracks permission mode changes reported by the CLI", () => {
+    const s = run(
+      { type: "spawned" },
+      msg({ type: "system", subtype: "status", permissionMode: "acceptEdits" }),
+    );
+    expect(s.permissionMode).toBe("acceptEdits");
   });
 
   it("releases the UI when the process dies mid-turn", () => {

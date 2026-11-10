@@ -33,6 +33,8 @@ export interface RunState {
   phase: Phase;
   process: ProcessState;
   sessionId: string | null;
+  /** CLI 当前权限模式（default / acceptEdits / plan / bypassPermissions） */
+  permissionMode: string | null;
   pending: PendingPermission[];
   lastResult: ResultMessage | null;
   exitCode: number | null;
@@ -51,6 +53,7 @@ export const initialRunState: RunState = {
   phase: "idle",
   process: "spawning",
   sessionId: null,
+  permissionMode: null,
   pending: [],
   lastResult: null,
   exitCode: null,
@@ -125,6 +128,11 @@ function onMessage(state: RunState, msg: CliMessage, at: number): RunState {
   const sid = (msg as { session_id?: unknown }).session_id;
   if (typeof sid === "string" && sid && sid !== state.sessionId) {
     state = { ...state, sessionId: sid };
+  }
+  // init 和 set_permission_mode 后的 system/status 都会带当前模式
+  if (msg.type === "system") {
+    const pm = (msg as { permissionMode?: unknown }).permissionMode;
+    if (typeof pm === "string" && pm) state = { ...state, permissionMode: pm };
   }
 
   if (isCanUseTool(msg)) {

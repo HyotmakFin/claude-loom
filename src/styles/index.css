@@ -134,12 +134,6 @@
 .md img { max-width: 100%; border-radius: var(--radius-card); border: 1px solid var(--color-line); }
 .md input[type="checkbox"] { margin-right: 0.4em; }
 
-/* 长会话：离屏消息跳过布局与绘制（不支持时自动忽略） */
-.chat-item {
-  content-visibility: auto;
-  contain-intrinsic-size: auto 160px;
-}
-
 /* 代码块复制按钮 */
 .md .loom-code { position: relative; margin: 0.7em 0; }
 .md .loom-code > pre { margin: 0; }

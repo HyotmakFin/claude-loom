@@ -16,13 +16,15 @@ import { Kbd, StatusPill, type Tone } from "@/components/ui/StatusDot";
 import { TextArea } from "@/components/ui/TextField";
 import { itemsFromCli, itemsFromHistory, type ChatItem } from "@/lib/chatItems";
 import { copyText } from "@/lib/clipboard";
+import { contextOf, modelLabel, modelOf } from "@/lib/hud";
 import { startOptions } from "@/lib/cliOptions";
 import { errorText, ipc } from "@/lib/ipc";
-import type { SessionDetail, SessionSummary } from "@/lib/types";
+import type { GitInfo, SessionDetail, SessionSummary } from "@/lib/types";
 import { useConfig } from "@/stores/config";
 import { useRuns, type RunSlice } from "@/stores/runs";
 
 import { ChatMessageView } from "./ChatMessageView";
+import { StatusHud } from "./StatusHud";
 import { PreviewPanel } from "@/features/preview/PreviewPanel";
 
 /** sessionId → runId，切换会话不丢进程 */
@@ -66,6 +68,8 @@ export function ChatView({
   const [pendingDelete, setPendingDelete] = useState<ChatItem | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
   const stick = useRef(true);
+  const [git, setGit] = useState<GitInfo | null>(null);
+  const [modeNonce, setModeNonce] = useState(0);
 
   const run = useRuns((s) => (runId ? s.runs[runId] : undefined));
   const phase = run?.state.phase ?? "idle";
@@ -74,6 +78,7 @@ export function ChatView({
 
   useEffect(() => {
     let alive = true;
+    stick.current = true;
     setLoadError(null);
     setError(null);
     setDraft("");
@@ -104,6 +109,52 @@ export function ChatView({
   const partial = run?.partial ?? "";
 
   const cwd = detail?.session.projectPath ?? session.projectPath ?? null;
+
+  // 当前 git 状态（分支 / dirty / ahead-behind）；会话元数据里的 gitBranch 可能已过期
+  useEffect(() => {
+    if (!cwd) {
+      setGit(null);
+      return;
+    }
+    setGit(null);
+    let alive = true;
+    ipc.gitInfo(cwd).then(
+      (g) => alive && setGit(g),
+      () => alive && setGit(null),
+    );
+    return () => {
+      alive = false;
+    };
+  }, [cwd, run?.state.phase]);
+
+  const hudModel = useMemo(() => {
+    const fromRun = modelOf(run, detail?.messages);
+    if (fromRun) return fromRun;
+    const profile = cfg.profiles.find((p) => p.id === cfg.activeProfileId);
+    return profile?.models.fallback?.trim() || profile?.models.sonnet?.trim() || null;
+  }, [run, detail, cfg]);
+  const hudContext = useMemo(() => contextOf(run, detail?.messages, cfg), [run, detail, cfg]);
+  const permissionMode = run?.state.permissionMode ?? cfg.permissionMode ?? "default";
+  const changeMode = async (mode: string) => {
+    if (mode === "bypassPermissions" && !window.confirm("跳过所有权限确认？工具调用将不再询问。")) {
+      setModeNonce((n) => n + 1);
+      return;
+    }
+    setError(null);
+    try {
+      if (runId && run?.state.process === "alive") {
+        await useRuns.getState().setPermissionMode(runId, mode);
+      }
+      await useConfig.getState().update((c) => ({ ...c, permissionMode: mode }));
+    } catch (e) {
+      setError(errorText(e));
+    }
+  };
+  const jumpTop = () => {
+    stick.current = false;
+    scrollRef.current?.scrollTo({ top: 0, behavior: "smooth" });
+  };
+
   const commands = run?.commands ?? [];
   const slashQuery = !slashDismissed && /^\/[^\s]*$/.test(draft) ? draft.slice(1).toLowerCase() : null;
   const filteredCommands = useMemo(() => {
@@ -289,6 +340,7 @@ export function ChatView({
 
         <div
           ref={scrollRef}
+          data-chat-scroll
           className="min-h-0 flex-1 overflow-y-auto"
           onScroll={(e) => {
             const el = e.currentTarget;
@@ -490,6 +542,18 @@ export function ChatView({
             </div>
           </div>
         </footer>
+
+        <StatusHud
+          model={hudModel ? modelLabel(hudModel) : null}
+          cwd={cwd}
+          git={git}
+          context={hudContext}
+          mode={permissionMode}
+          modeNonce={modeNonce}
+          busy={busy}
+          onModeChange={(m) => void changeMode(m)}
+          onJumpTop={jumpTop}
+        />
       </div>
 
       {previewOpen && <PreviewPanel cwd={cwd} onClose={() => setPreviewOpen(false)} />}

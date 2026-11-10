@@ -95,6 +95,14 @@ app.whenReady().then(() => {
   win.webContents.on("did-fail-load", (_e, code, desc, url) => {
     console.error("[loom] load failed", code, desc, url);
   });
+  if (process.env.LOOM_EVAL) {
+    win.webContents.on("did-finish-load", () => {
+      win.webContents
+        .executeJavaScript(process.env.LOOM_EVAL)
+        .then((r) => console.log("[eval]", JSON.stringify(r)))
+        .catch((e) => console.error("[eval]", e));
+    });
+  }
   if (process.env.LOOM_FPS_OVERLAY) {
     win.webContents.on("did-finish-load", () => {
       const script = `(() => {

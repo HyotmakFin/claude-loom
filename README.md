@@ -57,6 +57,10 @@ sidecar 通过 `#[path]` 直接包含 `sidecar/backend/src` 的模块；项目�
   localhost 网页内嵌，其余可在系统浏览器打开。
 - **深色模式**：跟随系统 / 浅色 / 深色三态切换，代码高亮同步。
 - **权限**：CLI 的工具权限请求会变成确认卡片（允许 / 始终允许 / 拒绝 / 拒绝并中止）。
+- **HUD**：底部状态栏显示当前模型、会话目录、git 分支 / dirty / ahead-behind、
+  上下文用量（tokens 与百分比）；可直接切换权限模式
+  （default / acceptEdits / plan / bypassPermissions），并一键回到最早消息。
+  长会话不再使用 `content-visibility`，可稳定滚到第一条可显示的消息。
 
 ## 数据位置
 
@@ -70,30 +74,30 @@ API Key 以明文保存在 Loom 的配置文件中（Unix 下权限 0600），�
 
 ## 安装
 
-从 [Releases](https://github.com/HyotMakFin/claude-loom/releases) 下载 0.5.0 的 Linux 包：
+从 [Releases](https://github.com/HyotMakFin/claude-loom/releases) 下载 0.5.1 的 Linux 包：
 
 **Arch Linux**
 
 ```bash
-sudo pacman -U claude-loom-0.5.0.pacman
+sudo pacman -U claude-loom-0.5.1.pacman
 ```
 
 **其他 Linux**
 
 ```bash
-chmod +x Loom-0.5.0.AppImage
-./Loom-0.5.0.AppImage
+chmod +x Loom-0.5.1.AppImage
+./Loom-0.5.1.AppImage
 ```
 
-无 FUSE 时：`./Loom-0.5.0.AppImage --appimage-extract-and-run`。
+无 FUSE 时：`./Loom-0.5.1.AppImage --appimage-extract-and-run`。
 
 **Windows**
 
-运行 `Loom-0.5.0-Setup.exe`。未签名，SmartScreen 提示时选择「更多信息 → 仍要运行」。
+运行 `Loom-0.5.1-Setup.exe`。未签名，SmartScreen 提示时选择「更多信息 → 仍要运行」。
 
 **macOS**
 
-打开 `Loom-0.5.0-universal.dmg`，把 Loom 拖进 Applications；未签名，首次启动右键 → 打开，
+打开 `Loom-0.5.1-universal.dmg`，把 Loom 拖进 Applications；未签名，首次启动右键 → 打开，
 或 `xattr -dr com.apple.quarantine /Applications/Loom.app`。
 
 ## 开发
@@ -129,7 +133,7 @@ npx electron-builder --mac --universal  # macOS 通用 DMG（需 macOS）
 ## 帧率验收
 
 ```bash
-LOOM_FPS_OVERLAY=1 ./release/Loom-0.5.0.AppImage
+LOOM_FPS_OVERLAY=1 ./release/Loom-0.5.1.AppImage
 ```
 
 右下角会显示当前 rAF 帧率。在 200Hz 显示器上实测稳定 **200.0 fps**。

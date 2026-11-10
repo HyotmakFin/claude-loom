@@ -22,6 +22,15 @@ pub struct ToolResult {
     pub is_error: bool,
 }
 
+#[derive(Debug, Clone, Default, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct TokenUsage {
+    pub input_tokens: u64,
+    pub output_tokens: u64,
+    pub cache_creation_input_tokens: u64,
+    pub cache_read_input_tokens: u64,
+}
+
 #[derive(Debug, Clone, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct ChatMessage {
@@ -32,6 +41,10 @@ pub struct ChatMessage {
     pub timestamp: Option<String>,
     pub text: Option<String>,
     pub thinking: Option<String>,
+    /// 助手消息实际使用的模型；用于 HUD
+    pub model: Option<String>,
+    /// 该次请求的 token 用量；用于上下文使用量
+    pub usage: Option<TokenUsage>,
     pub tool_uses: Vec<ToolUse>,
     pub tool_results: Vec<ToolResult>,
 }
@@ -44,6 +57,8 @@ impl ChatMessage {
             timestamp: None,
             text: None,
             thinking: None,
+            model: None,
+            usage: None,
             tool_uses: vec![],
             tool_results: vec![],
         }
@@ -62,6 +77,19 @@ fn clip(s: String) -> String {
     } else {
         s
     }
+}
+
+fn usage_from_value(v: &Value) -> Option<TokenUsage> {
+    if !v.is_object() {
+        return None;
+    }
+    let n = |k: &str| v.get(k).and_then(Value::as_u64).unwrap_or(0);
+    Some(TokenUsage {
+        input_tokens: n("input_tokens"),
+        output_tokens: n("output_tokens"),
+        cache_creation_input_tokens: n("cache_creation_input_tokens"),
+        cache_read_input_tokens: n("cache_read_input_tokens"),
+    })
 }
 
 fn result_text(v: &Value) -> String {
@@ -91,6 +119,11 @@ pub fn entry_to_message(v: &Value) -> Option<ChatMessage> {
     let mut out = ChatMessage::new(kind);
     out.uuid = v.get("uuid").and_then(Value::as_str).map(str::to_string);
     out.timestamp = v.get("timestamp").and_then(Value::as_str).map(str::to_string);
+
+    if kind == "assistant" {
+        out.model = msg.get("model").and_then(Value::as_str).map(str::to_string);
+        out.usage = msg.get("usage").and_then(usage_from_value);
+    }
 
     match msg.get("content") {
         Some(Value::String(s)) => {
@@ -180,7 +213,9 @@ mod tests {
         assert_eq!(m.role, "user");
         assert_eq!(m.text.as_deref(), Some("你好"));
 
-        let a = json!({"type":"assistant","message":{"role":"assistant","content":[
+        let a = json!({"type":"assistant","message":{"role":"assistant","model":"claude-sonnet-5-5",
+            "usage":{"input_tokens":12,"output_tokens":34,"cache_creation_input_tokens":56,"cache_read_input_tokens":78},
+            "content":[
             {"type":"thinking","thinking":"先看看"},
             {"type":"text","text":"好的"},
             {"type":"tool_use","id":"t1","name":"Bash","input":{"command":"ls"}}]}});
@@ -188,6 +223,10 @@ mod tests {
         assert_eq!(m.thinking.as_deref(), Some("先看看"));
         assert_eq!(m.text.as_deref(), Some("好的"));
         assert_eq!(m.tool_uses[0].name, "Bash");
+        assert_eq!(m.model.as_deref(), Some("claude-sonnet-5-5"));
+        let usage = m.usage.unwrap();
+        assert_eq!(usage.input_tokens, 12);
+        assert_eq!(usage.cache_read_input_tokens, 78);
     }
 
     #[test]

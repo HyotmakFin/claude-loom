@@ -4,6 +4,8 @@
 //! Events:    {"event": "loom://cli", "payload": {...}}
 #[path = "../backend/src/config.rs"]
 mod config;
+#[path = "../backend/src/git.rs"]
+mod git;
 #[path = "../backend/src/paths.rs"]
 mod paths;
 #[path = "../backend/src/platform.rs"]
@@ -185,6 +187,12 @@ async fn dispatch(
             let path = path_arg(&args, "path")?;
             let enabled = args.get("enabled").and_then(Value::as_bool).unwrap_or(false);
             json(plugins::plugin_toggle(app.clone(), path, enabled)?)
+        }
+
+        // git
+        "git_info" => {
+            let path = path_arg(&args, "path")?;
+            json(git::info(&path)?)
         }
 
         // preview

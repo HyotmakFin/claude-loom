@@ -28,6 +28,16 @@ describe("runs store", () => {
     sent.length = 0;
   });
 
+  it("sends set_permission_mode and updates the local mode", async () => {
+    const id = await useRuns.getState().start({ cwd: "/" });
+    await useRuns.getState().setPermissionMode(id, "plan");
+    const req = sent.find(
+      (m) => (m as { type?: string }).type === "control_request" && (m as { request?: { subtype?: string } }).request?.subtype === "set_permission_mode",
+    ) as { request?: { mode?: string } } | undefined;
+    expect(req?.request?.mode).toBe("plan");
+    expect(useRuns.getState().runs[id]!.state.permissionMode).toBe("plan");
+  });
+
   it("answers each permission request exactly once, even when called re-entrantly", async () => {
     const id = await useRuns.getState().start({ cwd: "/" });
     await useRuns.getState().send(id, "hi");

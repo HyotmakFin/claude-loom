@@ -92,6 +92,20 @@ export interface ToolResult {
   isError: boolean;
 }
 
+export interface TokenUsage {
+  inputTokens: number;
+  outputTokens: number;
+  cacheCreationInputTokens: number;
+  cacheReadInputTokens: number;
+}
+
+export interface GitInfo {
+  branch: string | null;
+  dirty: boolean;
+  ahead: number;
+  behind: number;
+}
+
 export interface ChatMessage {
   role: "user" | "assistant" | "system";
   /** 对应 JSONL 行的 uuid；用于分叉 / 删除 */
@@ -99,6 +113,8 @@ export interface ChatMessage {
   timestamp: string | null;
   text: string | null;
   thinking: string | null;
+  model: string | null;
+  usage: TokenUsage | null;
   toolUses: ToolUse[];
   toolResults: ToolResult[];
 }
