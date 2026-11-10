@@ -7,12 +7,17 @@ on:
         description: "Release tag to upload to"
         required: true
         default: "v0.5.0"
+      target:
+        description: "win, mac, or both"
+        required: true
+        default: "both"
 
 permissions:
   contents: write
 
 jobs:
   windows:
+    if: ${{ inputs.target != 'mac' }}
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@v4
@@ -34,7 +39,8 @@ jobs:
         run: gh release upload "${{ inputs.tag }}" release/*.exe --clobber
 
   macos:
-    runs-on: macos-13
+    if: ${{ inputs.target != 'win' }}
+    runs-on: macos-15-intel
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
