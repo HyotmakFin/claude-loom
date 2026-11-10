@@ -6,6 +6,7 @@ import type {
   FilePreview,
   GitInfo,
   LoomConfig,
+  ModelList,
   PluginDirInfo,
   PluginsListing,
   SessionDetail,
@@ -75,6 +76,7 @@ export const ipc = {
   // 预览 / 环境
   previewFile: (path: string) => invoke<FilePreview>("preview_file", { path }),
   gitInfo: (path: string) => invoke<GitInfo>("git_info", { path }),
+  modelsList: (baseUrl: string, apiKey: string) => invoke<ModelList>("models_list", { baseUrl, apiKey }),
 };
 
 export function errorText(e: unknown): string {

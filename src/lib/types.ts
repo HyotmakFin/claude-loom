@@ -124,6 +124,11 @@ export interface SessionDetail {
   messages: ChatMessage[];
 }
 
+export interface ModelList {
+  endpoint: string;
+  models: string[];
+}
+
 export interface SkillInfo {
   dir: string;
   id: string;

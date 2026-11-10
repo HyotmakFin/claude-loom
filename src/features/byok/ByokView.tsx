@@ -1,6 +1,7 @@
 /**
  * BYOK：多套配置，字段与注入变量参考 cc-switch 的 Claude Code Provider 编辑器。
- * 所有值只注入 Loom 启动的 claude 进程，不改动 ~/.claude/settings.json。
+ * 值会注入 Loom 启动的 claude 进程，并合并写入 ~/.claude/settings.json 的 env
+ * （见 sidecar/backend/src/byok.rs；保留 hooks/theme/其他键）。
  */
 import { openUrl } from "@/lib/electron";
 import { useEffect, useState, type ReactNode } from "react";
@@ -13,8 +14,8 @@ import { PageHeader } from "@/components/ui/SectionHeader";
 import { Switch } from "@/components/ui/Switch";
 import { Select, TextField } from "@/components/ui/TextField";
 import { AUTH_FIELDS, profileEnv, type ModelRoleKey } from "@/lib/cliOptions";
-import { errorText } from "@/lib/ipc";
-import type { ModelMap, Profile } from "@/lib/types";
+import { errorText, ipc } from "@/lib/ipc";
+import type { ModelList, ModelMap, Profile } from "@/lib/types";
 import { useConfig } from "@/stores/config";
 
 function blankModels(): ModelMap {
@@ -68,6 +69,9 @@ export function ByokView() {
   const [showKey, setShowKey] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [pendingDelete, setPendingDelete] = useState<Profile | null>(null);
+  const [modelList, setModelList] = useState<ModelList | null>(null);
+  const [modelsLoading, setModelsLoading] = useState(false);
+  const [modelsError, setModelsError] = useState<string | null>(null);
 
   const selected = config.profiles.find((p) => p.id === selectedId) ?? null;
 
@@ -94,6 +98,26 @@ export function ByokView() {
   const editModel = (patch: Partial<ModelMap>) => {
     setDraft((d) => (d ? { ...d, models: { ...d.models, ...patch } } : d));
     setDirty(true);
+  };
+
+  useEffect(() => {
+    setModelList(null);
+    setModelsError(null);
+  }, [selectedId, draft?.baseUrl, draft?.apiKey]);
+
+  const fetchModels = async () => {
+    if (!draft) return;
+    setModelsError(null);
+    setModelsLoading(true);
+    try {
+      const list = await ipc.modelsList(draft.baseUrl.trim(), draft.apiKey.trim());
+      setModelList(list);
+      if (list.models.length === 0) setModelsError("接口没有返回任何模型");
+    } catch (e) {
+      setModelsError(errorText(e));
+    } finally {
+      setModelsLoading(false);
+    }
   };
 
   const save = () =>
@@ -287,10 +311,31 @@ export function ByokView() {
                 </section>
 
                 <section>
-                  <SectionTitle
-                    title="模型映射"
-                    hint="实际请求模型写入 ANTHROPIC_DEFAULT_*_MODEL / CLAUDE_CODE_SUBAGENT_MODEL；勾选 1M 会追加 [1m]。"
-                  />
+                  <div className="mb-2 flex items-end justify-between gap-3">
+                    <SectionTitle
+                      title="模型映射"
+                      hint="留空会移除对应覆盖，回落到 Claude 官方默认模型。实际请求模型写入 ANTHROPIC_DEFAULT_*_MODEL / CLAUDE_CODE_SUBAGENT_MODEL；勾选 1M 会追加 [1m]（客户端后缀，请求前会去掉）。"
+                    />
+                    <Button
+                      size="sm"
+                      variant="secondary"
+                      icon="refresh"
+                      disabled={!draft.baseUrl.trim() || modelsLoading}
+                      onClick={() => void fetchModels()}
+                    >
+                      {modelsLoading ? "请求中…" : "请求模型列表"}
+                    </Button>
+                  </div>
+                  {modelsError && (
+                    <p className="mb-2 rounded-control border border-line bg-surface px-2.5 py-1.5 font-sans text-[11px] text-danger">
+                      {modelsError}
+                    </p>
+                  )}
+                  {modelList && (
+                    <p className="mb-2 truncate font-sans text-[11px] text-ink-faint" title={modelList.endpoint}>
+                      已获取 {modelList.models.length} 个模型 · {modelList.endpoint}
+                    </p>
+                  )}
                   <div className="overflow-hidden rounded-card border border-line">
                     <div className="grid grid-cols-[5.5rem_minmax(0,1fr)_minmax(0,1fr)_2.5rem] gap-2 border-b border-line bg-canvas px-3 py-2 font-sans text-[11px] text-ink-faint">
                       <span>模型角色</span>
@@ -318,12 +363,31 @@ export function ByokView() {
                           ) : (
                             <span className="font-sans text-[11px] text-ink-faint">{role.hint}</span>
                           )}
-                          <TextField
-                            className="h-7 rounded-chip px-2 font-mono text-[11.5px]"
-                            value={model}
-                            onChange={(e) => editModel({ [role.key]: e.target.value } as Partial<ModelMap>)}
-                            placeholder={role.placeholder}
-                          />
+                          <div className="flex min-w-0 items-center gap-1">
+                            <TextField
+                              className="h-7 min-w-0 flex-1 rounded-chip px-2 font-mono text-[11.5px]"
+                              value={model}
+                              onChange={(e) => editModel({ [role.key]: e.target.value } as Partial<ModelMap>)}
+                              placeholder={role.placeholder}
+                            />
+                            <select
+                              aria-label={`选择 ${role.label} 模型`}
+                              title="从已获取的模型列表中选择"
+                              className="h-7 w-24 shrink-0 rounded-chip border border-line bg-surface px-1 font-mono text-[10.5px] text-ink-muted outline-none hover:bg-sunken disabled:opacity-50"
+                              value={modelList?.models.includes(model) ? model : ""}
+                              disabled={!modelList || modelList.models.length === 0}
+                              onChange={(e) => {
+                                if (e.target.value) editModel({ [role.key]: e.target.value } as Partial<ModelMap>);
+                              }}
+                            >
+                              <option value="">选择</option>
+                              {modelList?.models.map((m) => (
+                                <option key={m} value={m}>
+                                  {m}
+                                </option>
+                              ))}
+                            </select>
+                          </div>
                           <label className="flex justify-center" title="声明 1M 上下文">
                             <input
                               type="checkbox"
@@ -336,6 +400,11 @@ export function ByokView() {
                       );
                     })}
                   </div>
+                  <p className="mt-2 font-sans text-[11px] leading-relaxed text-ink-faint">
+                    留空的角色会从启动环境与 settings.json 中移除。Claude 中转站通常留空，或从上方列表选择；
+                    DeepSeek 官方配置：Sonnet/Opus 填 <code className="font-mono">deepseek-flash[1m]</code> 并勾选 1M，
+                    Haiku/Subagent 填 <code className="font-mono">deepseek-flash</code>。
+                  </p>
                 </section>
 
                 <section className="rounded-card border border-line bg-canvas px-3.5 py-3">
@@ -344,7 +413,9 @@ export function ByokView() {
                     启动时注入
                   </div>
                   {Object.keys(envPreview.env).length === 0 ? (
-                    <p className="font-sans text-[11.5px] text-ink-faint">不注入任何环境变量（使用 CLI 自带鉴权）。</p>
+                    <p className="font-sans text-[11.5px] text-ink-faint">
+                      不注入环境变量；留空的模型项会从环境与 settings 中移除。
+                    </p>
                   ) : (
                     <ul className="space-y-1 font-mono text-[11.5px]">
                       {Object.entries(envPreview.env).map(([k, v]) => (
@@ -354,6 +425,11 @@ export function ByokView() {
                         </li>
                       ))}
                     </ul>
+                  )}
+                  {envPreview.envRemove.length > 0 && (
+                    <p className="mt-2 break-words font-mono text-[10.5px] text-ink-faint">
+                      移除：{envPreview.envRemove.join(", ")}
+                    </p>
                   )}
                 </section>
 

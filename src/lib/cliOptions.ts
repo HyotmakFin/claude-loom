@@ -34,8 +34,8 @@ export type ModelRoleKey = (typeof MODEL_ENV)[number]["key"];
 /** 当前配置将被注入的环境变量（key 已脱敏由调用方处理）。 */
 export function profileEnv(p: Profile | undefined): { env: Record<string, string>; envRemove: string[] } {
   const env: Record<string, string> = {};
-  const envRemove: string[] = [];
-  if (!p) return { env, envRemove };
+  const remove = new Set<string>();
+  if (!p) return { env, envRemove: [] };
 
   const baseUrl = p.baseUrl.trim();
   const key = p.apiKey.trim();
@@ -44,19 +44,21 @@ export function profileEnv(p: Profile | undefined): { env: Record<string, string
     const field = p.authField === "ANTHROPIC_API_KEY" ? "ANTHROPIC_API_KEY" : "ANTHROPIC_AUTH_TOKEN";
     env[field] = key;
     // 两者同时存在时 CLI 的行为不确定，主动移除另一个
-    envRemove.push(field === "ANTHROPIC_API_KEY" ? "ANTHROPIC_AUTH_TOKEN" : "ANTHROPIC_API_KEY");
+    remove.add(field === "ANTHROPIC_API_KEY" ? "ANTHROPIC_AUTH_TOKEN" : "ANTHROPIC_API_KEY");
   }
 
   for (const role of MODEL_ENV) {
     const cfg = p.models[role.key];
     const value = effectiveModel(cfg, p.models[`${role.key}Million` as keyof Profile["models"]] as boolean);
     if (value) env[role.model] = value;
+    else remove.add(role.model); // 留空：清掉旧覆盖，回落到官方默认模型
     if (role.hasName) {
       const display = p.models[`${role.key}Name` as keyof Profile["models"]] as string;
       if (display?.trim()) env[role.name] = display.trim();
+      else remove.add(role.name);
     }
   }
-  return { env, envRemove };
+  return { env, envRemove: [...remove] };
 }
 
 export function startOptions(cfg: LoomConfig, cwd: string, resume?: string): StartOptions {

@@ -43,14 +43,14 @@ describe("CLI options", () => {
     expect(env.ANTHROPIC_BASE_URL).toBe("https://proxy.test");
     expect(env.ANTHROPIC_AUTH_TOKEN).toBe("sk-1");
     expect(env.ANTHROPIC_API_KEY).toBeUndefined();
-    expect(envRemove).toEqual(["ANTHROPIC_API_KEY"]);
+    expect(envRemove).toContain("ANTHROPIC_API_KEY");
   });
 
   it("可切换为 ANTHROPIC_API_KEY", () => {
     const { env, envRemove } = profileEnv({ ...profile, authField: "ANTHROPIC_API_KEY" });
     expect(env.ANTHROPIC_API_KEY).toBe("sk-1");
     expect(env.ANTHROPIC_AUTH_TOKEN).toBeUndefined();
-    expect(envRemove).toEqual(["ANTHROPIC_AUTH_TOKEN"]);
+    expect(envRemove).toContain("ANTHROPIC_AUTH_TOKEN");
   });
 
   it("映射 Sonnet / Opus / Fable / Haiku / Subagent / 兜底模型", () => {
@@ -79,11 +79,23 @@ describe("CLI options", () => {
     expect(env.ANTHROPIC_MODEL).toBe("m-d[1m]");
   });
 
-  it("没有 Key 时不注入认证变量，也不移除继承的环境", () => {
+  it("没有 Key 时不注入认证变量", () => {
     const { env, envRemove } = profileEnv({ ...profile, apiKey: "  " });
     expect(env.ANTHROPIC_AUTH_TOKEN).toBeUndefined();
-    expect(envRemove).toEqual([]);
+    expect(envRemove).not.toContain("ANTHROPIC_AUTH_TOKEN");
+    expect(envRemove).not.toContain("ANTHROPIC_API_KEY");
     expect(env.ANTHROPIC_BASE_URL).toBe("https://proxy.test");
+  });
+
+  it("模型字段留空时移除对应 env，回落到官方默认", () => {
+    const { env, envRemove } = profileEnv({ ...profile, models: models() });
+    expect(env.ANTHROPIC_DEFAULT_OPUS_MODEL).toBeUndefined();
+    expect(env.CLAUDE_CODE_SUBAGENT_MODEL).toBeUndefined();
+    expect(env.ANTHROPIC_MODEL).toBeUndefined();
+    expect(envRemove).toContain("ANTHROPIC_DEFAULT_OPUS_MODEL");
+    expect(envRemove).toContain("ANTHROPIC_DEFAULT_OPUS_MODEL_NAME");
+    expect(envRemove).toContain("CLAUDE_CODE_SUBAGENT_MODEL");
+    expect(envRemove).toContain("ANTHROPIC_MODEL");
   });
 
   it("保留启用的插件目录并传递 cliPath / 权限模式", () => {
