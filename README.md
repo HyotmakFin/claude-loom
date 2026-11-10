@@ -47,6 +47,10 @@ sidecar 通过 `#[path]` 直接包含 `sidecar/backend/src` 的模块；项目�
   `ANTHROPIC_AUTH_TOKEN` 或 `ANTHROPIC_API_KEY`，以及
   `ANTHROPIC_MODEL`、`ANTHROPIC_DEFAULT_{OPUS,SONNET,FABLE,HAIKU}_MODEL(_NAME)`、
   `CLAUDE_CODE_SUBAGENT_MODEL`；支持显示名与 1M（`[1m]`）标记，Key 默认掩码。
+  启动 CLI 前会把当前 profile 的 env 合并写入 `$CLAUDE_CONFIG_DIR/settings.json`
+  （默认 `~/.claude/settings.json`）的 `env`，保留 hooks/theme/其他键；首次写入前备份为
+  `settings.json.loom-backup`，文件权限 0600。Claude Code 的 settings `env` 优先于进程环境变量，
+  只传子进程 env 不会覆盖已有 settings。
 - **Skill**：扫描 `~/.claude/skills/*/SKILL.md`，启停、编辑 frontmatter 与正文、新建 Skill。
 - **插件**：列出已安装插件；添加外部插件目录并通过 `--plugin-dir` 传给 CLI。
 - **斜杠命令**：输入 `/` 实时预览当前目录可用的命令 / Skill，↑↓ 选择，Enter 或 Tab 填入。
@@ -74,30 +78,30 @@ API Key 以明文保存在 Loom 的配置文件中（Unix 下权限 0600），�
 
 ## 安装
 
-从 [Releases](https://github.com/HyotMakFin/claude-loom/releases) 下载 0.5.1 的 Linux 包：
+从 [Releases](https://github.com/HyotMakFin/claude-loom/releases) 下载 0.5.2 的 Linux 包：
 
 **Arch Linux**
 
 ```bash
-sudo pacman -U claude-loom-0.5.1.pacman
+sudo pacman -U claude-loom-0.5.2.pacman
 ```
 
 **其他 Linux**
 
 ```bash
-chmod +x Loom-0.5.1.AppImage
-./Loom-0.5.1.AppImage
+chmod +x Loom-0.5.2.AppImage
+./Loom-0.5.2.AppImage
 ```
 
-无 FUSE 时：`./Loom-0.5.1.AppImage --appimage-extract-and-run`。
+无 FUSE 时：`./Loom-0.5.2.AppImage --appimage-extract-and-run`。
 
 **Windows**
 
-运行 `Loom-0.5.1-Setup.exe`。未签名，SmartScreen 提示时选择「更多信息 → 仍要运行」。
+运行 `Loom-0.5.2-Setup.exe`。未签名，SmartScreen 提示时选择「更多信息 → 仍要运行」。
 
 **macOS**
 
-打开 `Loom-0.5.1-universal.dmg`，把 Loom 拖进 Applications；未签名，首次启动右键 → 打开，
+打开 `Loom-0.5.2-universal.dmg`，把 Loom 拖进 Applications；未签名，首次启动右键 → 打开，
 或 `xattr -dr com.apple.quarantine /Applications/Loom.app`。
 
 ## 开发
@@ -133,7 +137,7 @@ npx electron-builder --mac --universal  # macOS 通用 DMG（需 macOS）
 ## 帧率验收
 
 ```bash
-LOOM_FPS_OVERLAY=1 ./release/Loom-0.5.1.AppImage
+LOOM_FPS_OVERLAY=1 ./release/Loom-0.5.2.AppImage
 ```
 
 右下角会显示当前 rAF 帧率。在 200Hz 显示器上实测稳定 **200.0 fps**。
