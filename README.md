@@ -78,7 +78,7 @@ API Key 以明文保存在 Loom 的配置文件中（Unix 下权限 0600），�
 sudo pacman -U claude-loom-0.5.0.pacman
 ```
 
-**任意 Linux**
+**其他 Linux**
 
 ```bash
 chmod +x Loom-0.5.0.AppImage
@@ -87,7 +87,14 @@ chmod +x Loom-0.5.0.AppImage
 
 无 FUSE 时：`./Loom-0.5.0.AppImage --appimage-extract-and-run`。
 
-Windows / macOS 的 Electron 构建尚未发布；0.4.0 的旧 Tauri 包仍可在 Releases 中下载。
+**Windows**
+
+运行 `Loom-0.5.0-Setup.exe`。未签名，SmartScreen 提示时选择「更多信息 → 仍要运行」。
+
+**macOS**
+
+打开 `Loom-0.5.0-universal.dmg`，把 Loom 拖进 Applications；未签名，首次启动右键 → 打开，
+或 `xattr -dr com.apple.quarantine /Applications/Loom.app`。
 
 ## 开发
 
@@ -113,9 +120,11 @@ npm run electron              # 启动 Electron（加载 dist/）
 npm run build
 npx electron-builder --linux            # AppImage + pacman
 npx electron-builder --linux AppImage   # 只打 AppImage
+npx electron-builder --win              # Windows NSIS
+npx electron-builder --mac --universal  # macOS 通用 DMG（需 macOS）
 ```
 
-产物在 `release/`。Windows/macOS 需要各自的 runner 上执行 `electron-builder --win` / `--mac`。
+产物在 `release/`。Windows / macOS 需要各自的 runner；仓库里的 `electron-release.yml` 会在 `windows-latest` 与 `macos-15-intel` 上构建并上传到指定 Release。
 
 ## 帧率验收
 
