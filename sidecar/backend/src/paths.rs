@@ -79,7 +79,7 @@ pub fn claude_settings_model() -> Option<String> {
             .filter(|s| !s.is_empty())
             .map(str::to_string)
     };
-    get("ANTHROPIC_MODEL")
+    if let Some(model) = get("ANTHROPIC_MODEL")
         .or_else(|| get("ANTHROPIC_DEFAULT_OPUS_MODEL"))
         .or_else(|| get("ANTHROPIC_DEFAULT_SONNET_MODEL"))
         .or_else(|| {
@@ -89,6 +89,11 @@ pub fn claude_settings_model() -> Option<String> {
                 .filter(|s| !s.is_empty())
                 .map(str::to_string)
         })
+    {
+        return Some(model);
+    }
+    // 留空 = 显式使用 Claude Code 默认模型，避免 resume 沿用会话旧模型
+    Some("default".to_string())
 }
 
 pub fn ensure_dir(p: &std::path::Path) -> Result<(), String> {

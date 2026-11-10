@@ -91,7 +91,10 @@ async fn dispatch(
             )
             .map_err(|e| format!("invalid options: {e}"))?;
             if options.model.is_none() {
-                options.model = paths::claude_settings_model();
+                options.model = Some(
+                    paths::claude_settings_model()
+                        .unwrap_or_else(|| "default".to_string()),
+                );
             }
             json(cli::commands::cli_start(app.clone(), state(), options).await?)
         }

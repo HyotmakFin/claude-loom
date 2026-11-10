@@ -95,6 +95,7 @@ export function usageOf(
 }
 
 function inferWindow(model: string | null, used: number): number {
+  if (model === "default") return 200_000;
   if (model && /\[1m\]|(^|[^0-9])1m([^0-9]|$)/i.test(model)) return 1_000_000;
   // 官方 Claude 默认 200k；非 Claude 模型在 >200k token 时按 1M 估
   if (model && model.startsWith("claude-")) return 200_000;
@@ -119,6 +120,7 @@ export function formatTokens(n: number): string {
 
 /** 原始 model id → 紧凑显示名；未知格式原样返回。 */
 export function modelLabel(model: string): string {
+  if (model === "default") return "Claude 默认";
   const m = model.replace(/\[1m\]$/i, "").replace(/^claude-/, "");
   const mm = /^(opus|sonnet|haiku|fable)-(\d+)-(\d+)$/.exec(m);
   if (mm) return `${mm[1]![0]!.toUpperCase()}${mm[1]!.slice(1)} ${mm[2]}.${mm[3]}${/\[1m\]$/i.test(model) ? " 1M" : ""}`;
