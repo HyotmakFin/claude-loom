@@ -34,7 +34,7 @@ jobs:
         run: gh release upload "${{ inputs.tag }}" release/*.exe --clobber
 
   macos:
-    runs-on: macos-14
+    runs-on: macos-13
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
