@@ -1,7 +1,7 @@
 /**
  * 插件：已安装插件只读展示；用户添加的外部目录通过 `--plugin-dir` 传给 CLI。
  */
-import { open as openDialog } from "@tauri-apps/plugin-dialog";
+import { openDialog } from "@/lib/electron";
 import { useEffect, useState } from "react";
 
 import { Button } from "@/components/ui/Button";

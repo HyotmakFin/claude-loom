@@ -159,3 +159,15 @@ Loom 不支持的 control_request 子类型由 Rust 直接回复 `subtype:"error
 - 帧率：WebKitGTK 的 VBlankMonitor 线程 60Hz。`scripts/fps-patch/vblank_patch.c`
   通过 `LD_PRELOAD` 只缩短该线程的 `nanosleep`；Rust 在 GTK 初始化前 re-exec 注入，
   库位于 `/usr/lib/loom/libloom-vblank.so`（AppImage 中由 resources 提供）。
+
+## 0.5 起：Electron + Rust sidecar
+
+Linux 上 Tauri 的 WebKitGTK 把上屏帧率限制在 60fps（max 见 `docs` 与 README）。
+0.5 起渲染层改为 Electron/Chromium：
+
+- `electron/main.cjs`：窗口、IPC、启动 sidecar、转发 CLI 事件
+- `electron/preload.cjs`：`window.loom`（invoke/onEvent/对话框/剪贴板）
+- `sidecar/src/main.rs`：stdio JSON-RPC；通过 `#[path]` 复用 `src-tauri/src` 的后端模块
+- `sidecar/tauri-shim`：最小 `tauri` 兼容层（AppHandle/State/emit/async_runtime）
+
+原 Tauri 外壳保留为遗留代码，不再是发布产物。

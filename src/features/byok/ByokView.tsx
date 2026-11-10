@@ -2,7 +2,7 @@
  * BYOK：多套配置，字段与注入变量参考 cc-switch 的 Claude Code Provider 编辑器。
  * 所有值只注入 Loom 启动的 claude 进程，不改动 ~/.claude/settings.json。
  */
-import { openUrl } from "@tauri-apps/plugin-opener";
+import { openUrl } from "@/lib/electron";
 import { useEffect, useState, type ReactNode } from "react";
 
 import { Button } from "@/components/ui/Button";

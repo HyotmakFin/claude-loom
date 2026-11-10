@@ -2,7 +2,7 @@
  * CLI 运行实例 store。Tauri 事件 → reducer（src/cli/machine.ts）→ Zustand。
  * 所有写 stdin 的副作用集中在这里，组件只调用 action。
  */
-import { listen } from "@tauri-apps/api/event";
+import { listen } from "@/lib/electron";
 import { create } from "zustand";
 
 import { initialRunState, reduce, canSend, type RunState, type Signal } from "@/cli/machine";

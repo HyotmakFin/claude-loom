@@ -2,7 +2,7 @@
  * CLI 调试页：手动启动 claude、收发 NDJSON、走一遍权限状态机。
  * 模块 3 的正式对话视图完成后保留为开发工具。
  */
-import { homeDir } from "@tauri-apps/api/path";
+import { homeDir } from "@/lib/electron";
 import { useEffect, useMemo, useRef, useState } from "react";
 
 import type { Phase } from "@/cli/machine";

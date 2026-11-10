@@ -11,4 +11,4 @@ pub mod locate;
 pub mod ndjson;
 mod process;
 
-pub use process::CliRegistry;
+pub use process::{CliRegistry, StartOptions};

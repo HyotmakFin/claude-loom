@@ -2,8 +2,7 @@
  * 内置预览：Markdown / 图片 / 代码（Shiki）与 localhost 网页。
  * 三个平台的 WebView 内嵌能力不一致，所以网页模式始终提供"在系统浏览器打开"兜底。
  */
-import { open as openDialog } from "@tauri-apps/plugin-dialog";
-import { openUrl } from "@tauri-apps/plugin-opener";
+import { openDialog, openUrl } from "@/lib/electron";
 import { useEffect, useMemo, useState } from "react";
 
 import { Button } from "@/components/ui/Button";

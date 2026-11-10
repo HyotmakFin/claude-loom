@@ -3,10 +3,10 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 const sent: unknown[] = [];
 let emit: (payload: unknown) => void = () => {};
 
-vi.mock("@tauri-apps/api/core", () => ({
+vi.mock("@/lib/electron", () => ({
   invoke: vi.fn(async (cmd: string, args: { message?: unknown }) => {
     if (cmd === "cli_start") {
-      // Rust 侧在命令返回前已发出 spawned 事件，这里模拟同样的顺序
+      // 后端在命令返回前已发出 spawned 事件，这里模拟同样的顺序
       queueMicrotask(() => emit({ kind: "spawned", runId: "run-1", pid: 1, cliPath: "claude" }));
       return "run-1";
     }
@@ -15,8 +15,6 @@ vi.mock("@tauri-apps/api/core", () => ({
       sent.push(args.message);
     }
   }),
-}));
-vi.mock("@tauri-apps/api/event", () => ({
   listen: vi.fn(async (_: string, cb: (e: { payload: unknown }) => void) => {
     emit = (payload) => cb({ payload });
     return () => {};

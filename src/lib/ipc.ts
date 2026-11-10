@@ -1,5 +1,5 @@
 /** 对 Rust 命令的类型化封装。命令定义见 src-tauri 下的 commands 模块。 */
-import { invoke } from "@tauri-apps/api/core";
+import { invoke } from "./electron";
 
 import type {
   AppInfo,

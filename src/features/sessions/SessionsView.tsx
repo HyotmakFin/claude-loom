@@ -1,6 +1,5 @@
 /** 会话管理：搜索、置顶、归档、删除、进入对话、新建会话。 */
-import { homeDir } from "@tauri-apps/api/path";
-import { open as openDialog } from "@tauri-apps/plugin-dialog";
+import { homeDir, openDialog } from "@/lib/electron";
 import { useCallback, useEffect, useState } from "react";
 
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";

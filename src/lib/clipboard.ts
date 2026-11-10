@@ -1,13 +1,14 @@
-import { writeText } from "@tauri-apps/plugin-clipboard-manager";
 
 /** 复制文本：优先 Tauri 剪贴板插件（不依赖用户激活），再退回浏览器 API。 */
 export async function copyText(text: string): Promise<boolean> {
   if (!text) return false;
-  try {
-    await writeText(text);
-    return true;
-  } catch {
-    // fall through
+  if (typeof window !== "undefined" && window.loom?.copyText) {
+    try {
+      await window.loom.copyText(text);
+      return true;
+    } catch {
+      // fall through
+    }
   }
   try {
     await navigator.clipboard.writeText(text);

@@ -1,8 +1,9 @@
 name: release
 
 on:
-  push:
-    tags: ["v*"]
+  # Legacy Tauri release pipeline. Electron releases are built locally for now;
+  # tag pushes no longer trigger this workflow.
+  workflow_dispatch:
 
 permissions:
   contents: write

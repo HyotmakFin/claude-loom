@@ -7,6 +7,7 @@ import { fileURLToPath, URL } from "node:url";
 const host = process.env.TAURI_DEV_HOST;
 
 export default defineConfig({
+  base: "./",
   plugins: [react(), tailwindcss()],
   resolve: { alias: { "@": fileURLToPath(new URL("./src", import.meta.url)) } },
   clearScreen: false,
