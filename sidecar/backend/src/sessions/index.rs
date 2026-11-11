@@ -188,7 +188,7 @@ fn pid_alive(pid: u32) -> bool {
     }
 }
 
-fn live_sessions() -> HashMap<String, (LiveSession, Option<String>, Option<i64>)> {
+fn live_sessions() -> HashMap<String, LiveSession> {
     let mut map = HashMap::new();
     let Ok(dir) = paths::sessions_dir() else { return map };
     let Ok(entries) = std::fs::read_dir(dir) else { return map };
@@ -210,7 +210,7 @@ fn live_sessions() -> HashMap<String, (LiveSession, Option<String>, Option<i64>)
             status: rec.status.unwrap_or_else(|| "unknown".into()),
             name: rec.name,
         };
-        map.insert(id, (live, rec.cwd, rec.updated_at.or(rec.started_at)));
+        map.insert(id, live);
     }
     map
 }
@@ -261,7 +261,6 @@ pub fn scan(app: &tauri::AppHandle, query: Option<&str>, include_archived: bool)
     let needle = query.map(|q| q.trim().to_lowercase()).filter(|q| !q.is_empty());
 
     let mut out = Vec::new();
-    let mut seen = std::collections::HashSet::new();
 
     for (id, path) in list_jsonl(&projects) {
         let idx = index_file(&path);
@@ -282,11 +281,10 @@ pub fn scan(app: &tauri::AppHandle, query: Option<&str>, include_archived: bool)
             updated_at: idx.last.unwrap_or_else(|| file_stamp(&path).map(|(m, _)| m as i64).unwrap_or(0)),
             message_count: idx.messages,
             last_prompt: idx.last_prompt.clone(),
-            live: live.get(&id).map(|(l, _, _)| l.clone()),
+            live: live.get(&id).cloned(),
             pinned: flag.pinned,
             archived: flag.archived,
         };
-        seen.insert(id);
         out.push(summary);
         if let Some(q) = &needle {
             let hit = out.last().unwrap().title.to_lowercase().contains(q)
@@ -296,33 +294,6 @@ pub fn scan(app: &tauri::AppHandle, query: Option<&str>, include_archived: bool)
                 out.pop();
             }
         }
-    }
-
-    // 只有运行记录、还没有 JSONL 的会话（例如刚启动）也列出来
-    for (id, (l, cwd, updated)) in &live {
-        if seen.contains(id) {
-            continue;
-        }
-        if let Some(q) = &needle {
-            let name = l.name.clone().unwrap_or_default().to_lowercase();
-            if !name.contains(q) {
-                continue;
-            }
-        }
-        let flag = cfg.session_flags.get(id).copied().unwrap_or_default();
-        out.push(SessionSummary {
-            id: id.clone(),
-            title: l.name.clone().unwrap_or_else(|| format!("会话 {}", &id[..id.len().min(8)])),
-            project_path: cwd.clone(),
-            git_branch: None,
-            created_at: *updated,
-            updated_at: updated.unwrap_or(0),
-            message_count: 0,
-            last_prompt: None,
-            live: Some(l.clone()),
-            pinned: flag.pinned,
-            archived: flag.archived,
-        });
     }
 
     out.retain(|s| include_archived || !s.archived);
@@ -364,7 +335,7 @@ fn summary_for(app: &tauri::AppHandle, id: &str, path: &Path) -> Result<SessionS
         updated_at: idx.last.unwrap_or(0),
         message_count: idx.messages,
         last_prompt: idx.last_prompt.clone(),
-        live: live_sessions().get(id).map(|(l, _, _)| l.clone()),
+        live: live_sessions().get(id).cloned(),
         pinned: flag.pinned,
         archived: flag.archived,
     })

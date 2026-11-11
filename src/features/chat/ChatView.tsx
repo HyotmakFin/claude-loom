@@ -254,6 +254,11 @@ export function ChatView({
 
   const lastDone = run?.state.lastResult;
   const runSessionId = run?.state.sessionId ?? null;
+  // 新会话的真实 sessionId 出现后，把 run 也登记到真实 id 下：
+  // 否则在侧栏点击刚变成真实会话的那一行会重新挂载 ChatView 并丢掉对运行中进程的引用
+  useEffect(() => {
+    if (runId && runSessionId) sessionRuns.set(runSessionId, runId);
+  }, [runId, runSessionId]);
   useEffect(() => {
     if (run?.state.phase !== "done") return;
     onChanged();
@@ -374,7 +379,10 @@ export function ChatView({
   const head = run?.state.pending[0];
   const runSlice: RunSlice | undefined = run;
   // 自己启动的 CLI 在运行记录里的 pid 与 session.live 相同；只有外部进程才禁用删除
-  const liveIsOurs = !!session.live && !!run && run.state.pid === session.live.pid;
+  const liveIsOurs =
+    !!session.live &&
+    !!run &&
+    (run.state.pid === session.live.pid || (!run.state.pid && run.state.sessionId === session.id));
   const liveElsewhere = !!session.live && !liveIsOurs;
 
   return (
