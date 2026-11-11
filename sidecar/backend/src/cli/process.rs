@@ -39,6 +39,15 @@ pub struct StartOptions {
     #[serde(default)]
     pub partial_messages: bool,
     pub cli_path: Option<PathBuf>,
+    /// 侧问：resume 时创建临时 fork，不写回原会话
+    #[serde(default)]
+    pub fork_session: bool,
+    /// 侧问：不落盘，用完即弃
+    #[serde(default)]
+    pub no_session_persistence: bool,
+    /// `--tools` 的值；空字符串表示禁用全部工具（/btw 式的纯问答）
+    #[serde(default)]
+    pub tools: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize)]
@@ -109,6 +118,15 @@ impl CliRegistry {
         }
         if let Some(id) = &opts.resume {
             cmd.arg("--resume").arg(id);
+        }
+        if opts.fork_session {
+            cmd.arg("--fork-session");
+        }
+        if opts.no_session_persistence {
+            cmd.arg("--no-session-persistence");
+        }
+        if let Some(tools) = &opts.tools {
+            cmd.arg("--tools").arg(tools);
         }
         if let Some(model) = &opts.model {
             cmd.arg("--model").arg(model);

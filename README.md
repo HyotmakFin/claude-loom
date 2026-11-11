@@ -75,43 +75,43 @@ Provider/API Key 由 cc-switch 或 `settings.json` 管理；Loom 不读取也不
 
 ## 安装
 
-从 [Releases](https://github.com/HyotMakFin/claude-loom/releases) 下载 0.5.9 的 Linux 包：
+从 [Releases](https://github.com/HyotMakFin/claude-loom/releases) 下载 0.5.10 的 Linux 包：
 
 **Arch Linux**
 
 ```bash
-sudo pacman -U claude-loom-0.5.9.pacman
+sudo pacman -U claude-loom-0.5.10.pacman
 ```
 
 **Debian / Ubuntu**
 
 ```bash
-sudo apt install ./Loom-0.5.9-amd64.deb
+sudo apt install ./Loom-0.5.10-amd64.deb
 ```
 
 **Fedora / RHEL / openSUSE**
 
 ```bash
-sudo dnf install ./Loom-0.5.9-x86_64.rpm
-# openSUSE: sudo zypper install ./Loom-0.5.9-x86_64.rpm
+sudo dnf install ./Loom-0.5.10-x86_64.rpm
+# openSUSE: sudo zypper install ./Loom-0.5.10-x86_64.rpm
 ```
 
 **其他 Linux（AppImage）**
 
 ```bash
-chmod +x Loom-0.5.9.AppImage
-./Loom-0.5.9.AppImage
+chmod +x Loom-0.5.10.AppImage
+./Loom-0.5.10.AppImage
 ```
 
-无 FUSE 时：`./Loom-0.5.9.AppImage --appimage-extract-and-run`。
+无 FUSE 时：`./Loom-0.5.10.AppImage --appimage-extract-and-run`。
 
 **Windows**
 
-运行 `Loom-0.5.9-Setup.exe`。未签名，SmartScreen 提示时选择「更多信息 → 仍要运行」。
+运行 `Loom-0.5.10-Setup.exe`。未签名，SmartScreen 提示时选择「更多信息 → 仍要运行」。
 
 **macOS**
 
-打开 `Loom-0.5.9-universal.dmg`，把 Loom 拖进 Applications；未签名，首次启动右键 → 打开，
+打开 `Loom-0.5.10-universal.dmg`，把 Loom 拖进 Applications；未签名，首次启动右键 → 打开，
 或 `xattr -dr com.apple.quarantine /Applications/Loom.app`。
 
 ## 开发
@@ -147,7 +147,7 @@ npx electron-builder --mac --universal  # macOS 通用 DMG（需 macOS）
 ## 帧率验收
 
 ```bash
-LOOM_FPS_OVERLAY=1 ./release/Loom-0.5.9.AppImage
+LOOM_FPS_OVERLAY=1 ./release/Loom-0.5.10.AppImage
 ```
 
 右下角会显示当前 rAF 帧率。在 200Hz 显示器上实测稳定 **200.0 fps**。

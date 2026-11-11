@@ -22,10 +22,17 @@ export interface CliInfo {
 export interface StartOptions {
   cwd: string;
   resume?: string;
+  model?: string;
   permissionMode?: string;
   pluginDirs?: string[];
   partialMessages?: boolean;
   cliPath?: string;
+  /** 侧问：resume 时 fork 出临时会话 */
+  forkSession?: boolean;
+  /** 侧问：不写 transcript */
+  noSessionPersistence?: boolean;
+  /** `--tools` 的值；"" 表示禁用全部工具 */
+  tools?: string;
 }
 
 export const ipc = {

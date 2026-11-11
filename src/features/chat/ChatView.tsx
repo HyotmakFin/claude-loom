@@ -24,6 +24,7 @@ import { useConfig } from "@/stores/config";
 import { useRuns, type RunSlice } from "@/stores/runs";
 
 import { ChatMessageView } from "./ChatMessageView";
+import { SideQuestionPanel } from "./SideQuestionPanel";
 import { StatusHud } from "./StatusHud";
 import { PreviewPanel } from "@/features/preview/PreviewPanel";
 
@@ -57,6 +58,7 @@ export function ChatView({
   const [draft, setDraft] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [previewOpen, setPreviewOpen] = useState(false);
+  const [btwOpen, setBtwOpen] = useState(false);
   const [confirmLive, setConfirmLive] = useState<null | (() => void)>(null);
   const [slashIndex, setSlashIndex] = useState(0);
   const [slashDismissed, setSlashDismissed] = useState(false);
@@ -194,13 +196,20 @@ export function ChatView({
       .filter((c) => {
         const n = c.name.replace(/^\//, "").toLowerCase();
         return n.startsWith(slashQuery) || n.includes(slashQuery) || (c.aliases ?? []).some((a) => a.toLowerCase().startsWith(slashQuery));
-      })
-      .slice(0, 12);
+      });
   }, [commands, slashQuery]);
 
   useEffect(() => {
     setSlashIndex(0);
   }, [slashQuery]);
+
+  // 列表不再截断为 12 条，键盘选择时把当前项滚进可视区
+  useEffect(() => {
+    if (slashQuery === null) return;
+    composerRef.current
+      ?.querySelector<HTMLElement>(`[data-slash-index="${slashIndex}"]`)
+      ?.scrollIntoView({ block: "nearest" });
+  }, [slashIndex, slashQuery]);
 
   useEffect(() => {
     if (!/^\/[^\s]*$/.test(draft)) setSlashDismissed(false);
@@ -479,6 +488,15 @@ export function ChatView({
             />
           )}
           <div ref={composerRef} className="relative">
+            {btwOpen && (
+              <SideQuestionPanel
+                cwd={cwd}
+                sessionId={runSessionId ?? (isNew ? null : session.id)}
+                model={hudModel}
+                cliPath={cfg.cliPath ?? undefined}
+                onClose={() => setBtwOpen(false)}
+              />
+            )}
             {slashQuery !== null && (
               <div className="absolute right-0 bottom-full left-0 z-20 mb-2 overflow-hidden rounded-card border border-line bg-surface shadow-raised">
                 <div className="flex items-center justify-between border-b border-line px-3 py-1.5 font-sans text-[11px] text-ink-faint">
@@ -501,6 +519,7 @@ export function ChatView({
                       <button
                         key={c.name}
                         type="button"
+                        data-slash-index={i}
                         onMouseDown={(e) => {
                           e.preventDefault();
                           pickCommand(c);
@@ -588,19 +607,31 @@ export function ChatView({
                 <span className="mx-1 text-line-strong">·</span>
                 会话 {(run?.state.sessionId ?? (isNew ? null : session.id))?.slice(0, 8) ?? "新会话"}
               </span>
-              {busy && runId ? (
-                <Button size="sm" icon="stop" onClick={() => void useRuns.getState().stop(runId)}>
-                  中断
-                </Button>
-              ) : (
-                <Button
-                  variant="primary"
-                  icon="arrowUp"
-                  aria-label="发送"
-                  disabled={!draft.trim() || !cwd || !(!run || canSend(run.state))}
-                  onClick={() => void submit()}
-                />
-              )}
+              <div className="flex items-center gap-2">
+                {busy && runId && (
+                  <Button
+                    size="sm"
+                    variant={btwOpen ? "primary" : "secondary"}
+                    icon="zap"
+                    aria-label="侧问"
+                    title="侧问：不打断当前对话"
+                    onClick={() => setBtwOpen((v) => !v)}
+                  />
+                )}
+                {busy && runId ? (
+                  <Button size="sm" icon="stop" onClick={() => void useRuns.getState().stop(runId)}>
+                    中断
+                  </Button>
+                ) : (
+                  <Button
+                    variant="primary"
+                    icon="arrowUp"
+                    aria-label="发送"
+                    disabled={!draft.trim() || !cwd || !(!run || canSend(run.state))}
+                    onClick={() => void submit()}
+                  />
+                )}
+              </div>
             </div>
             </div>
           </div>
