@@ -79,6 +79,15 @@ Provider/API Key 由 cc-switch 或 `settings.json` 管理；Loom 不读取也不
 
 **Arch Linux**
 
+AUR 包 [`claude-loom-bin`](https://aur.archlinux.org/packages/claude-loom-bin)：
+
+```bash
+yay -S claude-loom-bin
+# 或 paru -S claude-loom-bin
+```
+
+会一并安装 `electron45` 与 `claude-code`。也可以直接装 Release 里的包：
+
 ```bash
 sudo pacman -U claude-loom-0.5.12.pacman
 ```
@@ -156,3 +165,7 @@ LOOM_FPS_OVERLAY=1 ./release/Loom-0.5.12.AppImage
 
 标志为一根橙色纬线以拱形越过中间经线、从两侧经线背后穿过——"织机"的经纬交织。
 品牌资源由 `scripts/build-logo.py` 生成到 `assets/brand/`；Electron 使用 `electron/icon.png`。
+
+## 致谢
+
+- [zxp19821005](https://github.com/zxp19821005)：帮助把 Loom 打包并发布到 AUR（[`claude-loom-bin`](https://aur.archlinux.org/packages/claude-loom-bin)）。
