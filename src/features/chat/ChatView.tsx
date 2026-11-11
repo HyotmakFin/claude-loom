@@ -245,6 +245,13 @@ export function ChatView({
     if (echoed) setPending(null);
   }, [echoed]);
 
+  // 进程退出（中断 / 崩溃）后刷新列表：~/.claude/sessions 里的记录要等 CLI 真正退出才失效
+  useEffect(() => {
+    if (run?.state.process !== "exited") return;
+    const t = setTimeout(onChanged, 500);
+    return () => clearTimeout(t);
+  }, [run?.state.process, onChanged]);
+
   const lastDone = run?.state.lastResult;
   const runSessionId = run?.state.sessionId ?? null;
   useEffect(() => {
@@ -403,7 +410,7 @@ export function ChatView({
           </div>
         </header>
 
-        {session.live && (
+        {liveElsewhere && session.live && (
           <div className="flex items-center gap-2 border-b border-line bg-canvas px-6 py-1.5 font-sans text-[11px] text-warn">
             <Icon name="warning" size={12} />
             该会话正在另一个终端中运行（pid {session.live.pid}），同时续聊可能造成状态冲突。
@@ -619,7 +626,17 @@ export function ChatView({
                   />
                 )}
                 {busy && runId ? (
-                  <Button size="sm" icon="stop" onClick={() => void useRuns.getState().stop(runId)}>
+                  <Button
+                    size="sm"
+                    icon="stop"
+                    onClick={() => {
+                      void useRuns.getState().stop(runId).finally(() => {
+                        // 进程退出后再刷一次侧栏的运行状态
+                        onChanged();
+                        setTimeout(onChanged, 600);
+                      });
+                    }}
+                  >
                     中断
                   </Button>
                 ) : (
