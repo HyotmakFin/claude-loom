@@ -117,6 +117,15 @@ async fn dispatch(
             json(serde_json::Value::Null)
         }
         "system_fonts" => json(platform::system_fonts().await),
+        "file_text" => {
+            let path = path_arg(&args, "path")?;
+            json(preview::read_text_file(&path)?)
+        }
+        "backup_stats" => json(paths::backup_stats(app)?),
+        "backup_clean" => {
+            let days = args.get("olderThanDays").and_then(Value::as_u64);
+            json(paths::backup_clean(app, days)?)
+        }
 
         // config
         "config_get" => json(config::config_get(app.clone())?),

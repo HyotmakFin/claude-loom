@@ -7,6 +7,17 @@ use serde::Serialize;
 const TEXT_LIMIT: usize = 512 * 1024;
 const IMAGE_LIMIT: u64 = 20 * 1024 * 1024;
 
+/// 读取文本文件用于 diff。文件不存在返回 None；二进制/非 UTF-8 报错。
+pub fn read_text_file(path: &Path) -> Result<Option<String>, String> {
+    match std::fs::read(path) {
+        Ok(data) => String::from_utf8(data)
+            .map(Some)
+            .map_err(|_| "文件不是 UTF-8 文本，无法做 diff".to_string()),
+        Err(e) if e.kind() == std::io::ErrorKind::NotFound => Ok(None),
+        Err(e) => Err(format!("无法读取文件：{e}")),
+    }
+}
+
 #[derive(Debug, Clone, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct FilePreview {

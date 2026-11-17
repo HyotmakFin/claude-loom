@@ -2,16 +2,17 @@
  * 应用外框：侧栏铺在画布色上，主工作区是一块内缩的白色圆角面板。
  * 各模块完成后把 NAV 中对应项的 ready 置为 true。
  */
-import { useCallback, useEffect, type ReactNode } from "react";
+import { useCallback, useEffect, useState, type ReactNode } from "react";
 
 import markDarkUrl from "@/assets/brand/loom-mark-dark.svg";
 import markLightUrl from "@/assets/brand/loom-mark.svg";
+import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { Icon, type IconName } from "@/components/ui/Icon";
 import { ipc } from "@/lib/ipc";
 import { useTheme } from "@/stores/theme";
 import { ThemeMenu } from "./ThemeMenu";
 
-export type Route = "sessions" | "skills" | "plugins" | "debug";
+export type Route = "sessions" | "skills" | "plugins" | "settings" | "debug";
 
 const NAV: { group: string; items: { id: Route; label: string; icon: IconName; ready: boolean }[] }[] = [
   {
@@ -23,6 +24,7 @@ const NAV: { group: string; items: { id: Route; label: string; icon: IconName; r
     items: [
       { id: "skills", label: "Skill", icon: "spark", ready: true },
       { id: "plugins", label: "插件", icon: "puzzle", ready: true },
+      { id: "settings", label: "设置", icon: "archive", ready: true },
     ],
   },
   {
@@ -44,6 +46,7 @@ function Logo({ dark }: { dark: boolean }) {
 
 export function AppShell({ route, onRoute, footer, children }: Props) {
   const theme = useTheme((s) => s.resolved);
+  const [confirmRefresh, setConfirmRefresh] = useState(false);
   const refresh = useCallback(async () => {
     try {
       await ipc.cliStopAll();
@@ -57,25 +60,26 @@ export function AppShell({ route, onRoute, footer, children }: Props) {
     const onKey = (e: KeyboardEvent) => {
       if (e.key === "F5" || ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "r")) {
         e.preventDefault();
-        void refresh();
+        setConfirmRefresh(true);
       }
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [refresh]);
+  }, []);
 
   return (
-    <div className="flex h-full gap-2 bg-canvas p-2 pl-0">
-      <aside className="flex w-56 shrink-0 flex-col pl-3">
+    <>
+      <div className="flex h-full gap-2 bg-canvas p-2 pl-0">
+        <aside className="flex w-56 shrink-0 flex-col pl-3">
         <div className="flex h-12 items-center gap-2 px-1.5">
           <Logo dark={theme === "dark"} />
-          <span className="font-serif text-[17px] font-semibold tracking-[-0.01em] text-ink">Loom</span>
+          <span className="font-serif text-[15px] font-semibold tracking-[-0.01em] text-ink">Claude-Loom</span>
           <ThemeMenu />
           <button
             type="button"
             title="刷新页面（F5 / Ctrl+R）"
             aria-label="刷新页面"
-            onClick={() => void refresh()}
+            onClick={() => setConfirmRefresh(true)}
             className="ml-auto flex size-7 items-center justify-center rounded-chip text-ink-faint hover:bg-hover hover:text-ink"
           >
             <Icon name="refresh" size={14} />
@@ -128,5 +132,18 @@ export function AppShell({ route, onRoute, footer, children }: Props) {
         {children}
       </main>
     </div>
+      <ConfirmDialog
+        open={confirmRefresh}
+        title="刷新 Claude-Loom？"
+        description="刷新会停止所有正在运行的 CLI 进程并重新加载界面，未发送的输入会丢失。"
+        confirmLabel="刷新"
+        danger
+        onCancel={() => setConfirmRefresh(false)}
+        onConfirm={() => {
+          setConfirmRefresh(false);
+          void refresh();
+        }}
+      />
+    </>
   );
 }

@@ -9,6 +9,7 @@ import type { PermissionDecision } from "@/cli/protocol";
 import { Button } from "./ui/Button";
 import { Icon } from "./ui/Icon";
 import { Kbd } from "./ui/StatusDot";
+import { DiffReview } from "@/features/chat/DiffReview";
 
 interface Props {
   item: PendingPermission;
@@ -44,12 +45,15 @@ const DENY: PermissionDecision = { behavior: "deny", message: "User denied this 
 export function PermissionPrompt({ item, queued, onDecide }: Props) {
   const { tool_name, input, permission_suggestions, decision_reason, blocked_path } = item.request;
   const [busy, setBusy] = useState(false);
+  const [reviewedInput, setReviewedInput] = useState<Record<string, unknown> | null>(null);
   const allowRef = useRef<HTMLButtonElement>(null);
   const summary = summarize(tool_name, input);
   const description = typeof input.description === "string" ? input.description : null;
+  const inputForAllow = reviewedInput ?? input;
 
   useEffect(() => {
     setBusy(false);
+    setReviewedInput(null);
     allowRef.current?.focus();
   }, [item.requestId]);
 
@@ -103,6 +107,9 @@ export function PermissionPrompt({ item, queued, onDecide }: Props) {
             受限路径 <span className="font-mono text-ink">{blocked_path}</span>
           </p>
         )}
+        {(tool_name === "Edit" || tool_name === "Write") && (
+          <DiffReview tool={tool_name} input={input} onChange={setReviewedInput} />
+        )}
         <details className="group font-sans text-[12px] text-ink-faint">
           <summary className="inline-flex cursor-pointer list-none items-center gap-1 select-none hover:text-ink">
             <Icon name="chevron" size={12} className="transition-transform group-open:rotate-90" />
@@ -134,7 +141,9 @@ export function PermissionPrompt({ item, queued, onDecide }: Props) {
           <Button
             size="sm"
             disabled={busy}
-            onClick={() => decide({ behavior: "allow", updatedInput: input, updatedPermissions: permission_suggestions })}
+            onClick={() =>
+              decide({ behavior: "allow", updatedInput: inputForAllow, updatedPermissions: permission_suggestions })
+            }
           >
             始终允许
           </Button>
@@ -145,7 +154,7 @@ export function PermissionPrompt({ item, queued, onDecide }: Props) {
           size="sm"
           icon="check"
           disabled={busy}
-          onClick={() => decide({ behavior: "allow", updatedInput: input })}
+          onClick={() => decide({ behavior: "allow", updatedInput: inputForAllow })}
         >
           允许
         </Button>

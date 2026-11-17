@@ -320,7 +320,7 @@ fn auto_reply(msg: &Value) -> Option<Value> {
         "response": {
             "subtype": "error",
             "request_id": request_id,
-            "error": format!("Loom does not handle control request '{subtype}'"),
+            "error": format!("Claude-Loom does not handle control request '{subtype}'"),
         }
     }))
 }

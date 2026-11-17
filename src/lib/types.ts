@@ -1,5 +1,11 @@
 /** 与 Rust 侧 serde 输出一一对应的类型（sidecar/backend/src/**）。 */
 
+export interface BackupStats {
+  dir: string;
+  files: number;
+  bytes: number;
+}
+
 export interface AppInfo {
   claudeDir: string;
   configDir: string;

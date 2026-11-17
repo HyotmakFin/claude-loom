@@ -52,7 +52,7 @@ impl AppHandle {
 
     pub fn package_info(&self) -> PackageInfo {
         PackageInfo {
-            name: "Loom".to_string(),
+            name: "Claude-Loom".to_string(),
             version: self.inner.version.clone(),
         }
     }

@@ -31,7 +31,7 @@ function startBackend() {
   });
   backend.on("error", (err) => {
     console.error("[loom] backend failed:", err);
-    dialog.showErrorBox("Loom 后端启动失败", `${file}\n${err.message}`);
+    dialog.showErrorBox("Claude-Loom 后端启动失败", `${file}\n${err.message}`);
     app.quit();
   });
   const rl = readline.createInterface({ input: backend.stdout });
@@ -79,7 +79,7 @@ app.whenReady().then(() => {
     height: 820,
     minWidth: 900,
     minHeight: 600,
-    title: "Loom",
+    title: "Claude-Loom",
     backgroundColor: "#f5f3ee",
     icon: path.join(__dirname, "icon.png"),
     webPreferences: {

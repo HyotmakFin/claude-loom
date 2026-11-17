@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import { CliConsole } from "@/features/debug/CliConsole";
 import { PluginsView } from "@/features/plugins/PluginsView";
 import { SessionsView } from "@/features/sessions/SessionsView";
+import { SettingsView } from "@/features/settings/SettingsView";
 import { AppShell, type Route } from "@/features/shell/AppShell";
 import { SkillsView } from "@/features/skills/SkillsView";
 import { StatusDot } from "@/components/ui/StatusDot";
@@ -41,6 +42,7 @@ export function App() {
       {route === "sessions" && <SessionsView />}
       {route === "skills" && <SkillsView />}
       {route === "plugins" && <PluginsView />}
+      {route === "settings" && <SettingsView />}
       {route === "debug" && <CliConsole />}
     </AppShell>
   );

@@ -682,8 +682,8 @@ export function ChatView({
         title="删除这条消息？"
         description={
           pendingDelete?.role === "user"
-            ? "会从会话记录中删除这条用户输入，以及它之后的回复和工具结果。原文件会备份到 Loom 配置目录；当前进程会断开，下次发送时重新 resume。"
-            : "会从会话记录中删除这条回复及其工具结果。原文件会备份到 Loom 配置目录；当前进程会断开，下次发送时重新 resume。"
+            ? "会从会话记录中删除这条用户输入，以及它之后的回复和工具结果。原文件会备份到 Claude-Loom 配置目录；当前进程会断开，下次发送时重新 resume。"
+            : "会从会话记录中删除这条回复及其工具结果。原文件会备份到 Claude-Loom 配置目录；当前进程会断开，下次发送时重新 resume。"
         }
         confirmLabel="删除"
         danger

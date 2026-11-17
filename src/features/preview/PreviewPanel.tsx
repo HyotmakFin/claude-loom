@@ -226,7 +226,7 @@ function WebMode({ cwd }: { cwd: string | null }) {
             <EmptyState
               icon="globe"
               title="此地址不支持内嵌"
-              hint="macOS / Windows / Linux 的 WebView 对外部站点策略不同，Loom 只内嵌 localhost。"
+              hint="macOS / Windows / Linux 的 WebView 对外部站点策略不同，Claude-Loom 只内嵌 localhost。"
               action={<Button icon="external" onClick={() => openUrl(current)}>在系统浏览器打开</Button>}
             />
           </div>

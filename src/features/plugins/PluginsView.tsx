@@ -130,7 +130,7 @@ export function PluginsView() {
 
           <p className="mt-6 flex items-start gap-2 font-sans text-[11.5px] leading-relaxed text-ink-faint">
             <Icon name="warning" size={12} className="mt-0.5 shrink-0" />
-            已安装插件由 CLI 自行加载，Loom 无法单独关闭；需要完全控制时，请把这些目录作为外部目录添加并禁用对应的安装项。
+            已安装插件由 CLI 自行加载，Claude-Loom 无法单独关闭；需要完全控制时，请把这些目录作为外部目录添加并禁用对应的安装项。
           </p>
         </div>
       </div>

@@ -164,11 +164,8 @@ fn index_file(path: &Path) -> Index {
 struct SessionRecord {
     session_id: Option<String>,
     pid: Option<u32>,
-    cwd: Option<String>,
     status: Option<String>,
     name: Option<String>,
-    updated_at: Option<i64>,
-    started_at: Option<i64>,
 }
 
 /// 进程是否仍存活。Unix 用 kill(pid, 0)；其他平台无法低成本判断，沿用记录状态。

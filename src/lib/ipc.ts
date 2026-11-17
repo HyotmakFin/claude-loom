@@ -3,6 +3,7 @@ import { invoke } from "./electron";
 
 import type {
   AppInfo,
+  BackupStats,
   FilePreview,
   GitInfo,
   LoomConfig,
@@ -81,7 +82,13 @@ export const ipc = {
 
   // 预览 / 环境
   previewFile: (path: string) => invoke<FilePreview>("preview_file", { path }),
+  fileText: (path: string) => invoke<string | null>("file_text", { path }),
   gitInfo: (path: string) => invoke<GitInfo>("git_info", { path }),
+
+  // 清理
+  backupStats: () => invoke<BackupStats>("backup_stats"),
+  backupClean: (olderThanDays?: number) =>
+    invoke<BackupStats>("backup_clean", { olderThanDays }),
 };
 
 export function errorText(e: unknown): string {
