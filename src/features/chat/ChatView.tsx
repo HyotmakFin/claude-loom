@@ -2,7 +2,7 @@
  * 会话对话视图：历史来自 JSONL，新消息来自 CLI 子进程（--resume）。
  * 首次发送时才 spawn CLI；切换会话后进程保留，返回时继续使用。
  */
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type DragEvent } from "react";
 
 import type { Phase } from "@/cli/machine";
 import type { SlashCommand } from "@/cli/protocol";
@@ -14,10 +14,12 @@ import { EmptyState } from "@/components/ui/EmptyState";
 import { Icon } from "@/components/ui/Icon";
 import { Kbd, StatusPill, type Tone } from "@/components/ui/StatusDot";
 import { TextArea } from "@/components/ui/TextField";
+import { ATTACH_LIMIT, composeMessage, fileName } from "@/lib/attachments";
 import { itemsFromCli, itemsFromHistory, type ChatItem } from "@/lib/chatItems";
 import { copyText } from "@/lib/clipboard";
 import { contextOf, modelLabel, modelOf } from "@/lib/hud";
 import { startOptions } from "@/lib/cliOptions";
+import { openFiles, pathForFile } from "@/lib/electron";
 import { errorText, ipc } from "@/lib/ipc";
 import type { GitInfo, SessionDetail, SessionSummary } from "@/lib/types";
 import { useConfig } from "@/stores/config";
@@ -56,6 +58,9 @@ export function ChatView({
   const [loadError, setLoadError] = useState<string | null>(null);
   const [runId, setRunId] = useState<string | null>(() => sessionRuns.get(session.id) ?? null);
   const [draft, setDraft] = useState("");
+  const [attachments, setAttachments] = useState<string[]>([]);
+  const [dragging, setDragging] = useState(false);
+  const dragDepth = useRef(0);
   const [error, setError] = useState<string | null>(null);
   const [previewOpen, setPreviewOpen] = useState(false);
   const [btwOpen, setBtwOpen] = useState(false);
@@ -315,29 +320,88 @@ export function ChatView({
     return id;
   };
 
-  const doSend = async (text: string) => {
+  const addAttachments = (paths: string[]) => {
+    const clean = paths.map((p) => p.trim()).filter(Boolean);
+    if (!clean.length) return;
+    setAttachments((prev) => {
+      const next = [...prev];
+      for (const path of clean) {
+        if (next.length >= ATTACH_LIMIT) break;
+        if (!next.includes(path)) next.push(path);
+      }
+      return next;
+    });
+    if (attachments.length + clean.length > ATTACH_LIMIT) {
+      setError(`一次最多附加 ${ATTACH_LIMIT} 个文件`);
+    }
+    requestAnimationFrame(() => composerRef.current?.querySelector("textarea")?.focus());
+  };
+
+  const pickFiles = async () => {
+    try {
+      addAttachments(await openFiles({ title: "添加文件" }));
+    } catch (e) {
+      setError(errorText(e));
+    }
+  };
+
+  const hasFiles = (e: DragEvent) => Array.from(e.dataTransfer.types).includes("Files");
+
+  const onDragEnter = (e: DragEvent) => {
+    if (!hasFiles(e)) return;
+    e.preventDefault();
+    dragDepth.current += 1;
+    setDragging(true);
+  };
+
+  const onDragOver = (e: DragEvent) => {
+    if (!hasFiles(e)) return;
+    e.preventDefault();
+    e.dataTransfer.dropEffect = "copy";
+  };
+
+  const onDragLeave = (e: DragEvent) => {
+    if (!hasFiles(e)) return;
+    dragDepth.current = Math.max(0, dragDepth.current - 1);
+    if (dragDepth.current === 0) setDragging(false);
+  };
+
+  const onDrop = (e: DragEvent) => {
+    if (!hasFiles(e)) return;
+    e.preventDefault();
+    dragDepth.current = 0;
+    setDragging(false);
+    const paths = Array.from(e.dataTransfer.files).map(pathForFile).filter(Boolean);
+    addAttachments(paths);
+  };
+
+  const doSend = async (text: string, draftText = text, files: string[] = []) => {
     setError(null);
     setDraft("");
+    setAttachments([]);
     try {
       const id = await ensureRun();
       const index = useRuns.getState().runs[id]?.messages.length ?? 0;
       setPending({ runId: id, text, index });
       await useRuns.getState().send(id, text);
     } catch (e) {
-      setDraft(text);
+      setDraft(draftText);
+      setAttachments(files);
       setError(errorText(e));
     }
   };
 
   const submit = () => {
     const text = draft.trim();
-    if (!text) return;
+    if (!text && attachments.length === 0) return;
+    const files = [...attachments];
+    const message = composeMessage(text, files);
     // 会话正在别的终端运行：先确认，避免两个实例同时写同一份转录
     if (session.live && !sessionRuns.get(session.id)) {
-      setConfirmLive(() => () => void doSend(text));
+      setConfirmLive(() => () => void doSend(message, text, files));
       return;
     }
-    void doSend(text);
+    void doSend(message, text, files);
   };
 
   const handleCopy = useCallback(async (text: string) => copyText(text), []);
@@ -386,7 +450,22 @@ export function ChatView({
   const liveElsewhere = !!session.live && !liveIsOurs;
 
   return (
-    <div className="flex h-full min-w-0">
+    <div
+      className="relative flex h-full min-w-0"
+      onDragEnter={onDragEnter}
+      onDragOver={onDragOver}
+      onDragLeave={onDragLeave}
+      onDrop={onDrop}
+    >
+      {dragging && (
+        <div className="pointer-events-none absolute inset-0 z-40 flex items-center justify-center bg-surface/85 p-8">
+          <div className="flex flex-col items-center gap-2 rounded-card border-2 border-dashed border-accent bg-canvas px-10 py-8 text-center">
+            <Icon name="plus" size={22} className="text-accent" />
+            <p className="font-sans text-[13px] font-medium text-ink">松开以添加文件</p>
+            <p className="font-sans text-[11.5px] text-ink-faint">文件路径会附在下一条消息里，Claude 可以直接读取</p>
+          </div>
+        </div>
+      )}
       <div className="flex min-w-0 flex-1 flex-col">
         <header className="flex h-14 shrink-0 items-center gap-3 border-b border-line px-6">
           <div className="min-w-0">
@@ -568,6 +647,28 @@ export function ChatView({
               </div>
             )}
             <div className="rounded-card border border-line bg-surface shadow-raised transition-[border-color,box-shadow] duration-150 focus-within:border-accent focus-within:ring-3 focus-within:ring-accent-tint">
+              {attachments.length > 0 && (
+                <div className="flex flex-wrap gap-1.5 px-3 pt-2.5">
+                  {attachments.map((path) => (
+                    <span
+                      key={path}
+                      title={path}
+                      className="inline-flex max-w-[280px] items-center gap-1 rounded-chip border border-line bg-sunken px-2 py-0.5 font-sans text-[11px] text-ink-muted"
+                    >
+                      <Icon name="file" size={11} className="shrink-0 text-ink-faint" />
+                      <span className="min-w-0 truncate">{fileName(path)}</span>
+                      <button
+                        type="button"
+                        aria-label={`移除 ${fileName(path)}`}
+                        onClick={() => setAttachments((prev) => prev.filter((p) => p !== path))}
+                        className="ml-0.5 flex size-4 shrink-0 items-center justify-center rounded-chip text-ink-faint hover:bg-surface hover:text-ink"
+                      >
+                        <Icon name="x" size={10} />
+                      </button>
+                    </span>
+                  ))}
+                </div>
+              )}
               <TextArea
               rows={2}
               className="block w-full px-4 pt-3 text-[14px]"
@@ -614,14 +715,27 @@ export function ChatView({
                 }
               }}
             />
-            <div className="flex items-center justify-between px-3 pb-2.5">
-              <span className="flex items-center gap-1 pl-1 font-sans text-[11px] text-ink-faint">
-                <Kbd>{isMac ? "⌘" : "Ctrl"}</Kbd>
-                <Kbd>↵</Kbd>
-                <span className="ml-1">发送</span>
-                <span className="mx-1 text-line-strong">·</span>
-                会话 {(run?.state.sessionId ?? (isNew ? null : session.id))?.slice(0, 8) ?? "新会话"}
-              </span>
+            <div className="flex items-center justify-between gap-2 px-3 pb-2.5">
+              <div className="flex min-w-0 items-center gap-1.5">
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  icon="plus"
+                  aria-label="添加文件"
+                  title="添加文件（也可以直接拖入）"
+                  disabled={!cwd}
+                  onClick={() => void pickFiles()}
+                />
+                <span className="flex min-w-0 items-center gap-1 font-sans text-[11px] text-ink-faint">
+                  <Kbd>{isMac ? "⌘" : "Ctrl"}</Kbd>
+                  <Kbd>↵</Kbd>
+                  <span className="ml-1">发送</span>
+                  <span className="mx-1 text-line-strong">·</span>
+                  <span className="truncate">
+                    会话 {(run?.state.sessionId ?? (isNew ? null : session.id))?.slice(0, 8) ?? "新会话"}
+                  </span>
+                </span>
+              </div>
               <div className="flex items-center gap-2">
                 {busy && runId && (
                   <Button
@@ -652,7 +766,7 @@ export function ChatView({
                     variant="primary"
                     icon="arrowUp"
                     aria-label="发送"
-                    disabled={!draft.trim() || !cwd || !(!run || canSend(run.state))}
+                    disabled={(!draft.trim() && attachments.length === 0) || !cwd || !(!run || canSend(run.state))}
                     onClick={() => void submit()}
                   />
                 )}

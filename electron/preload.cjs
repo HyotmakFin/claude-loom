@@ -1,7 +1,8 @@
-const { contextBridge, ipcRenderer } = require("electron");
+const { contextBridge, ipcRenderer, webUtils } = require("electron");
 
 contextBridge.exposeInMainWorld("loom", {
   invoke: (cmd, args) => ipcRenderer.invoke("loom:invoke", cmd, args),
+  getPathForFile: (file) => webUtils.getPathForFile(file),
   onEvent: (name, cb) => {
     const handler = (_event, event, payload) => {
       if (event === name) cb(payload);

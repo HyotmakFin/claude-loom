@@ -8,6 +8,8 @@ export interface OpenDialogOptions {
 
 export interface LoomBridge {
   invoke<T = unknown>(cmd: string, args?: Record<string, unknown>): Promise<T>;
+  /** Electron 32+ 不再提供 File.path；通过 preload 的 webUtils 取真实路径 */
+  getPathForFile(file: File): string;
   onEvent(name: string, cb: (payload: unknown) => void): () => void;
   openDialog(opts?: OpenDialogOptions): Promise<string | string[] | null>;
   openUrl(url: string): Promise<void>;
@@ -36,6 +38,20 @@ export async function openDialog(opts: OpenDialogOptions = {}): Promise<string |
   const value = await window.loom.openDialog(opts);
   if (Array.isArray(value)) return value[0] ?? null;
   return value ?? null;
+}
+
+export async function openFiles(opts: OpenDialogOptions = {}): Promise<string[]> {
+  const value = await window.loom.openDialog({ ...opts, multiple: true });
+  if (Array.isArray(value)) return value;
+  return value ? [value] : [];
+}
+
+export function pathForFile(file: File): string {
+  try {
+    return window.loom.getPathForFile(file) ?? "";
+  } catch {
+    return "";
+  }
 }
 
 export function openUrl(url: string): Promise<void> {

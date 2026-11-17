@@ -2,6 +2,7 @@ import { memo, useState } from "react";
 
 import { Icon } from "@/components/ui/Icon";
 import { Markdown } from "@/components/ui/Markdown";
+import { fileName, splitAttachments } from "@/lib/attachments";
 import type { ChatItem } from "@/lib/chatItems";
 import { formatClock } from "@/lib/format";
 
@@ -81,6 +82,7 @@ export const ChatMessageView = memo(function ChatMessageView({ item, onCopy, onF
   }
 
   if (item.role === "user") {
+    const { body, files } = splitAttachments(item.text);
     return (
       <div className="chat-item group relative mb-6">
         <div className="flex items-center gap-2 font-sans text-[11px] text-ink-faint">
@@ -88,7 +90,23 @@ export const ChatMessageView = memo(function ChatMessageView({ item, onCopy, onF
           <span>你</span>
           {item.timestamp && <span>{formatClock(item.timestamp)}</span>}
         </div>
-        <p className="mt-1.5 whitespace-pre-wrap pl-3.5 font-sans text-[13.5px] leading-relaxed text-ink">{item.text}</p>
+        {body && (
+          <p className="mt-1.5 whitespace-pre-wrap pl-3.5 font-sans text-[13.5px] leading-relaxed text-ink">{body}</p>
+        )}
+        {files.length > 0 && (
+          <div className="mt-1.5 flex flex-wrap gap-1.5 pl-3.5">
+            {files.map((path) => (
+              <span
+                key={path}
+                title={path}
+                className="inline-flex max-w-[280px] items-center gap-1 rounded-chip border border-line bg-canvas px-2 py-0.5 font-sans text-[11px] text-ink-muted"
+              >
+                <Icon name="file" size={11} className="shrink-0 text-ink-faint" />
+                <span className="min-w-0 truncate">{fileName(path)}</span>
+              </span>
+            ))}
+          </div>
+        )}
         <MessageActions item={item} onCopy={onCopy} onFork={onFork} onDelete={onDelete} />
       </div>
     );
