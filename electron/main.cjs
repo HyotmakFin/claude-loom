@@ -1,6 +1,5 @@
 const { app, BrowserWindow, Menu, ipcMain, dialog, shell, clipboard } = require("electron");
 const { spawn } = require("node:child_process");
-const fs = require("node:fs");
 const path = require("node:path");
 const readline = require("node:readline");
 
@@ -26,7 +25,7 @@ function startBackend() {
     stdio: ["pipe", "pipe", "inherit"],
     env: {
       ...process.env,
-      LOOM_CONFIG_DIR: process.env.LOOM_CONFIG_DIR || path.join(app.getPath("appData"), "dev.loom.app"),
+      LOOM_CONFIG_DIR: path.join(app.getPath("appData"), "dev.loom.app"),
       LOOM_VERSION: app.getVersion(),
     },
   });
@@ -76,8 +75,8 @@ app.whenReady().then(() => {
   if (process.platform !== "darwin") Menu.setApplicationMenu(null);
   startBackend();
   win = new BrowserWindow({
-    width: Number(process.env.LOOM_WINDOW_WIDTH || 1280),
-    height: Number(process.env.LOOM_WINDOW_HEIGHT || 820),
+    width: 1280,
+    height: 820,
     minWidth: 900,
     minHeight: 600,
     title: "Claude-Loom",
@@ -102,27 +101,6 @@ app.whenReady().then(() => {
         .executeJavaScript(process.env.LOOM_EVAL)
         .then((r) => console.log("[eval]", JSON.stringify(r)))
         .catch((e) => console.error("[eval]", e));
-    });
-  }
-  // 开发辅助：加载后可选执行一段脚本，再把窗口内容截图为 PNG 并退出。
-  if (process.env.LOOM_SHOT_DIR) {
-    win.webContents.on("did-finish-load", async () => {
-      const wait = (ms) => new Promise((r) => setTimeout(r, ms));
-      try {
-        await wait(Number(process.env.LOOM_SHOT_DELAY || 1200));
-        if (process.env.LOOM_SHOT_JS) {
-          await win.webContents.executeJavaScript(process.env.LOOM_SHOT_JS);
-          await wait(Number(process.env.LOOM_SHOT_WAIT || 900));
-        }
-        const image = await win.webContents.capturePage();
-        fs.mkdirSync(process.env.LOOM_SHOT_DIR, { recursive: true });
-        const name = process.env.LOOM_SHOT_NAME || "shot.png";
-        fs.writeFileSync(path.join(process.env.LOOM_SHOT_DIR, name), image.toPNG());
-        console.log("[shot]", name);
-      } catch (e) {
-        console.error("[shot] failed", e);
-      }
-      app.exit(0);
     });
   }
   if (process.env.LOOM_FPS_OVERLAY) {
