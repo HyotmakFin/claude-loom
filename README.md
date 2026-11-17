@@ -93,14 +93,14 @@ Provider / API Key 由 cc-switch 或 `settings.json` 管理；Claude-Loom 不读
 
 ## 安装
 
-从 [Releases](https://github.com/HyotMakFin/claude-loom/releases) 下载 0.6.0 的安装包。
+从 [Releases](https://github.com/HyotMakFin/claude-loom/releases) 下载 0.6.1 的安装包。
 
 **Arch Linux**
 
 Release 里的 pacman 包：
 
 ```bash
-sudo pacman -U claude-loom-0.6.0.pacman
+sudo pacman -U claude-loom-0.6.1.pacman
 ```
 
 > **AUR 说明**：AUR 上的 [`claude-loom-bin`](https://aur.archlinux.org/packages/claude-loom-bin)
@@ -113,10 +113,10 @@ sudo pacman -U claude-loom-0.6.0.pacman
 > ```
 >
 > 如果你已经安装了 Electron 45 和 Claude Code，请改用 Release 中的
-> `claude-loom-0.6.0.pacman` 直接安装：
+> `claude-loom-0.6.1.pacman` 直接安装：
 >
 > ```bash
-> sudo pacman -U claude-loom-0.6.0.pacman
+> sudo pacman -U claude-loom-0.6.1.pacman
 > ```
 >
 > 这样可以避免重复拉取依赖，安装的也是本项目实际构建的版本。
@@ -124,32 +124,32 @@ sudo pacman -U claude-loom-0.6.0.pacman
 **Debian / Ubuntu**
 
 ```bash
-sudo apt install ./Claude-Loom-0.6.0-amd64.deb
+sudo apt install ./Claude-Loom-0.6.1-amd64.deb
 ```
 
 **Fedora / RHEL / openSUSE**
 
 ```bash
-sudo dnf install ./Claude-Loom-0.6.0-x86_64.rpm
-# openSUSE: sudo zypper install ./Claude-Loom-0.6.0-x86_64.rpm
+sudo dnf install ./Claude-Loom-0.6.1-x86_64.rpm
+# openSUSE: sudo zypper install ./Claude-Loom-0.6.1-x86_64.rpm
 ```
 
 **其他 Linux（AppImage）**
 
 ```bash
-chmod +x Claude-Loom-0.6.0.AppImage
-./Claude-Loom-0.6.0.AppImage
+chmod +x Claude-Loom-0.6.1.AppImage
+./Claude-Loom-0.6.1.AppImage
 ```
 
-无 FUSE 时：`./Claude-Loom-0.6.0.AppImage --appimage-extract-and-run`。
+无 FUSE 时：`./Claude-Loom-0.6.1.AppImage --appimage-extract-and-run`。
 
 **Windows**
 
-运行 `Claude-Loom-0.6.0-Setup.exe`。未签名，SmartScreen 提示时选择「更多信息 → 仍要运行」。
+运行 `Claude-Loom-0.6.1-Setup.exe`。未签名，SmartScreen 提示时选择「更多信息 → 仍要运行」。
 
 **macOS**
 
-打开 `Claude-Loom-0.6.0-universal.dmg`，把 Claude-Loom 拖进 Applications；未签名，首次启动右键 → 打开，
+打开 `Claude-Loom-0.6.1-universal.dmg`，把 Claude-Loom 拖进 Applications；未签名，首次启动右键 → 打开，
 或 `xattr -dr com.apple.quarantine /Applications/Claude-Loom.app`。
 
 ## 开发
@@ -187,7 +187,7 @@ npx electron-builder --mac --universal  # macOS 通用 DMG（需 macOS）
 ## 帧率验收
 
 ```bash
-LOOM_FPS_OVERLAY=1 ./release/Claude-Loom-0.6.0.AppImage
+LOOM_FPS_OVERLAY=1 ./release/Claude-Loom-0.6.1.AppImage
 ```
 
 右下角会显示当前 rAF 帧率。在 200Hz 显示器上实测稳定 **200.0 fps**。
