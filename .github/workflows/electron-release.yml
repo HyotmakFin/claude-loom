@@ -8,7 +8,7 @@ on:
         required: true
         default: "v0.5.0"
       target:
-        description: "win, mac, linux, or both"
+        description: "win, mac, linux (AppImage), or both"
         required: true
         default: "both"
 
@@ -84,10 +84,9 @@ jobs:
       - run: npm ci
       - run: cargo build --release --manifest-path sidecar/Cargo.toml
       - run: npm run build
-      - run: sudo apt-get update && sudo apt-get install -y rpm
-      - run: npx electron-builder --linux rpm --publish never
-      - name: Upload RPM package
+      - run: npx electron-builder --linux AppImage --publish never
+      - name: Upload AppImage
         shell: bash
         env:
           GH_TOKEN: ${{ github.token }}
-        run: gh release upload "${{ inputs.tag }}" release/*.rpm --clobber
+        run: gh release upload "${{ inputs.tag }}" release/*.AppImage --clobber

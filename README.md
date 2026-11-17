@@ -95,46 +95,7 @@ Provider / API Key 由 cc-switch 或 `settings.json` 管理；Claude-Loom 不读
 
 从 [Releases](https://github.com/HyotMakFin/claude-loom/releases) 下载 0.6.1 的安装包。
 
-**Arch Linux**
-
-Release 里的 pacman 包：
-
-```bash
-sudo pacman -U claude-loom-0.6.1.pacman
-```
-
-> **AUR 说明**：AUR 上的 [`claude-loom-bin`](https://aur.archlinux.org/packages/claude-loom-bin)
-> 由第三方（[zxp19821005](https://github.com/zxp19821005)）打包维护，不是本项目发布的包，
-> 本项目不对其构建内容负责。该 AUR 包会把 `electron45` 与 `claude-code` 作为依赖一并安装：
->
-> ```bash
-> yay -S claude-loom-bin
-> # 或 paru -S claude-loom-bin
-> ```
->
-> 如果你已经安装了 Electron 45 和 Claude Code，请改用 Release 中的
-> `claude-loom-0.6.1.pacman` 直接安装：
->
-> ```bash
-> sudo pacman -U claude-loom-0.6.1.pacman
-> ```
->
-> 这样可以避免重复拉取依赖，安装的也是本项目实际构建的版本。
-
-**Debian / Ubuntu**
-
-```bash
-sudo apt install ./Claude-Loom-0.6.1-amd64.deb
-```
-
-**Fedora / RHEL / openSUSE**
-
-```bash
-sudo dnf install ./Claude-Loom-0.6.1-x86_64.rpm
-# openSUSE: sudo zypper install ./Claude-Loom-0.6.1-x86_64.rpm
-```
-
-**其他 Linux（AppImage）**
+**Linux（AppImage）**
 
 ```bash
 chmod +x Claude-Loom-0.6.1.AppImage
@@ -175,14 +136,13 @@ npm run electron              # 启动 Electron（加载 dist/）
 ```bash
 (cd sidecar && cargo build --release)
 npm run build
-npx electron-builder --linux            # AppImage + pacman + deb + rpm
-npx electron-builder --linux AppImage   # 只打 AppImage
+npx electron-builder --linux AppImage   # Linux AppImage
 npx electron-builder --win              # Windows NSIS
 npx electron-builder --mac --universal  # macOS 通用 DMG（需 macOS）
 ```
 
-产物在 `release/`。Windows / macOS 需要各自的 runner；仓库里的 `electron-release.yml` 会在
-`windows-latest` 与 `macos-15-intel` 上构建并上传到指定 Release。
+产物在 `release/`。Linux AppImage 可在本地构建；Windows / macOS 需要各自的 runner，
+仓库里的 `electron-release.yml` 会构建 AppImage、NSIS 与通用 DMG 并上传到指定 Release。
 
 ## 帧率验收
 
@@ -196,8 +156,3 @@ LOOM_FPS_OVERLAY=1 ./release/Claude-Loom-0.6.1.AppImage
 
 标志为一根橙色纬线以拱形越过中间经线、从两侧经线背后穿过——「织机」的经纬交织。
 品牌资源由 `scripts/build-logo.py` 生成到 `assets/brand/`；Electron 使用 `electron/icon.png`。
-
-## 致谢
-
-- [zxp19821005](https://github.com/zxp19821005)：帮助将 Claude-Loom 打包并发布到 AUR
-  （[`claude-loom-bin`](https://aur.archlinux.org/packages/claude-loom-bin)）。

@@ -63,30 +63,11 @@
     ],
     "linux": {
       "target": [
-        "AppImage",
-        "pacman",
-        "deb",
-        "rpm"
+        "AppImage"
       ],
       "category": "Development",
       "icon": "electron/icon.png",
       "maintainer": "Misuzu <HyotMakFin@users.noreply.github.com>"
-    },
-    "pacman": {
-      "depends": [
-        "c-ares",
-        "ffmpeg",
-        "gtk3",
-        "libevent",
-        "libvpx",
-        "libxslt",
-        "libxss",
-        "minizip",
-        "nss",
-        "re2",
-        "snappy",
-        "libnotify"
-      ]
     },
     "win": {
       "target": [
@@ -103,12 +84,6 @@
       "icon": "electron/icon.png",
       "artifactName": "Claude-Loom-${version}-${arch}.${ext}",
       "notarize": false
-    },
-    "deb": {
-      "artifactName": "Claude-Loom-${version}-${arch}.${ext}"
-    },
-    "rpm": {
-      "artifactName": "Claude-Loom-${version}-${arch}.${ext}"
     }
   },
   "license": "MIT"
