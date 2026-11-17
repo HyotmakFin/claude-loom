@@ -7,6 +7,18 @@ Claude-Loom 只是一层薄壳：不负责安装 CLI，也不处理网络或模�
 （也可以在界面配置里指定路径）。Provider / API Key 由 [cc-switch](https://github.com/farion1231/cc-switch)
 或 Claude Code 自己的 `settings.json` 管理，Claude-Loom 不保存密钥、也不修改 settings。
 
+## 截图
+
+| 会话、HUD 与工具卡片 | Edit / Write 的并排 diff 审查 |
+| --- | --- |
+| ![会话与 HUD](docs/screenshots/chat.png) | ![Diff 审查](docs/screenshots/diff-review.png) |
+
+| 全部斜杠命令（不截断） | 设置与备份清理 |
+| --- | --- |
+| ![斜杠命令](docs/screenshots/slash-commands.png) | ![设置与备份清理](docs/screenshots/settings-backups.png) |
+
+![刷新确认](docs/screenshots/refresh-confirm.png)
+
 ## 为什么用 Electron
 
 Linux 上的 Tauri 使用 WebKitGTK。WebKitGTK 2.54 在 Wayland 下把上屏帧率硬限制在 60fps：
