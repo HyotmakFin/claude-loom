@@ -93,24 +93,24 @@ Provider / API Key 由 cc-switch 或 `settings.json` 管理；Claude-Loom 不读
 
 ## 安装
 
-从 [Releases](https://github.com/HyotMakFin/claude-loom/releases) 下载 0.6.1 的安装包。
+从 [Releases](https://github.com/HyotMakFin/claude-loom/releases) 下载 0.6.2 的安装包。
 
 **Linux（AppImage）**
 
 ```bash
-chmod +x Claude-Loom-0.6.1.AppImage
-./Claude-Loom-0.6.1.AppImage
+chmod +x Claude-Loom-0.6.2.AppImage
+./Claude-Loom-0.6.2.AppImage
 ```
 
-无 FUSE 时：`./Claude-Loom-0.6.1.AppImage --appimage-extract-and-run`。
+无 FUSE 时：`./Claude-Loom-0.6.2.AppImage --appimage-extract-and-run`。
 
 **Windows**
 
-运行 `Claude-Loom-0.6.1-Setup.exe`。未签名，SmartScreen 提示时选择「更多信息 → 仍要运行」。
+运行 `Claude-Loom-0.6.2-Setup.exe`。未签名，SmartScreen 提示时选择「更多信息 → 仍要运行」。
 
 **macOS**
 
-打开 `Claude-Loom-0.6.1-universal.dmg`，把 Claude-Loom 拖进 Applications；未签名，首次启动右键 → 打开，
+打开 `Claude-Loom-0.6.2-universal.dmg`，把 Claude-Loom 拖进 Applications；未签名，首次启动右键 → 打开，
 或 `xattr -dr com.apple.quarantine /Applications/Claude-Loom.app`。
 
 ## 开发
@@ -147,7 +147,7 @@ npx electron-builder --mac --universal  # macOS 通用 DMG（需 macOS）
 ## 帧率验收
 
 ```bash
-LOOM_FPS_OVERLAY=1 ./release/Claude-Loom-0.6.1.AppImage
+LOOM_FPS_OVERLAY=1 ./release/Claude-Loom-0.6.2.AppImage
 ```
 
 右下角会显示当前 rAF 帧率。在 200Hz 显示器上实测稳定 **200.0 fps**。
