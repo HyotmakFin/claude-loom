@@ -42,9 +42,13 @@ interface ThemeStore {
   set: (m: ThemeMode) => void;
 }
 
+const initialMode = storedMode();
+
 export const useTheme = create<ThemeStore>((set) => ({
-  mode: storedMode(),
-  resolved: typeof document !== "undefined" ? (document.documentElement.dataset.theme === "dark" ? "dark" : "light") : "light",
+  mode: initialMode,
+  // 不要读 document.dataset.theme：store 在 main.tsx 调 applyTheme 之前就初始化了，
+  // 默认深色时会残留 light，导致 Logo 等组件拿到错误主题。
+  resolved: resolveTheme(initialMode),
   set(mode) {
     set({ mode, resolved: applyTheme(mode) });
   },
